@@ -668,8 +668,8 @@
         color: #B45309;
       }
       &.seller-color {
-        background-color: #DCFCE7;
-        color: #166534;
+        background-color: var(--color-brand-light);
+        color: var(--color-brand-text);
       }
     }
 
