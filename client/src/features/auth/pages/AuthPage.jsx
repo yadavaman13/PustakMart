@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import useAuth from "../hooks/useAuth.js";
 import logoImg from "../../../assets/logo.jpg";
 import PasswordStrengthMeter from "../../shared/components/PasswordStrengthMeter.jsx";
-
-
+import SEO from "../../shared/components/SEO.jsx";
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -264,6 +263,11 @@ export default function AuthPage() {
 
   return (
     <div className="auth-page-wrapper">
+      <SEO
+        title={view === "register" ? "Student Signup" : "Student Sign In"}
+        description="Access PustakMart to buy or sell second-hand academic books directly with peer students on campus. Secure registration and OTP login."
+        keywords="pustakmart login, student books signup, verify student email"
+      />
       <div className="auth-card">
         
         {/* Brand Logo */}

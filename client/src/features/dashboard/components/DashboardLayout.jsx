@@ -7,6 +7,7 @@ import Sidebar from "./Sidebar.jsx";
 import DashboardHeader from "./DashboardHeader.jsx";
 import UserDashboard from "../pages/UserDashboard.jsx";
 import SellerDashboard from "../pages/SellerDashboard.jsx";
+import SEO from "../../shared/components/SEO.jsx";
 import { getNotificationsApi, getConversationsApi } from "../services/dashboard.api.js";
 
 const DashboardLayoutContent = () => {
@@ -83,8 +84,29 @@ const DashboardLayoutContent = () => {
 
   const activeTab = paramTab || (dashboardMode === "seller" ? "overview" : "home");
 
+  const personSchema = user ? {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": user.name,
+    "email": user.email,
+    "affiliation": {
+      "@type": "Organization",
+      "name": user.collegeName || "PustakMart University Partner"
+    }
+  } : null;
+
+  const seoTitle = dashboardMode === "seller"
+    ? `Seller Dashboard (${activeTab.toUpperCase()})`
+    : `Student Dashboard (${activeTab.toUpperCase()})`;
+
   return (
     <div className="dashboard-main-layout-container">
+      <SEO
+        title={seoTitle}
+        description={`Manage your pre-owned textbooks, chat with buyers and sellers, and edit your profile settings on PustakMart.`}
+        keywords="student dashboard, used books sell panel, manage textbook requests"
+        schema={personSchema}
+      />
       {/* Sidebar Navigation */}
       <Sidebar 
         isOpen={isMobileSidebarOpen} 

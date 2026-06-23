@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useHome } from "../hooks/useHome.js";
 import useAuth from "../../auth/hooks/useAuth.js";
+import SEO from "../../shared/components/SEO.jsx";
 import logoImg from "../../../assets/logo.jpg";
 
 export default function HomePage() {
@@ -56,8 +57,39 @@ export default function HomePage() {
     { key: "other", label: "Other Resources", icon: "ri-more-fill" },
   ];
 
+  const orgSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "PustakMart",
+    "url": "https://pustakmart.com",
+    "logo": "https://ik.imagekit.io/cuq3fe9wm/PustakMart/logo.jpg",
+    "sameAs": [
+      "https://www.linkedin.com/company/pustakmart",
+      "https://github.com/yadavaman13/PustakMart"
+    ]
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://pustakmart.com/"
+      }
+    ]
+  };
+
   return (
     <div className="pustakmart-home-container">
+      <SEO 
+        title="Direct Campus Book Exchange" 
+        description="Buy, sell, and request academic textbooks directly from peers on your campus. Save up to 70% with zero commission fees and zero shipping delays."
+        keywords="pustakmart, buy used books, sell textbooks, college book marketplace, engineering used books, medical books exchange"
+        schema={[orgSchema, breadcrumbSchema]}
+      />
       
       {/* 1. HEADER NAVIGATION BAR */}
       <header className="home-header">
@@ -174,16 +206,16 @@ export default function HomePage() {
         <div className="hero-banner-card">
           {/* Animated floating books in background */}
           <div className="floating-book book-1">
-            <img src="https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=150" alt="Moving Book 1" />
+            <img src="https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=150" alt="Moving Book 1" loading="lazy" width="150" height="200" />
           </div>
           <div className="floating-book book-2">
-            <img src="https://images.unsplash.com/photo-1512820790803-83ca734da794?w=150" alt="Moving Book 2" />
+            <img src="https://images.unsplash.com/photo-1512820790803-83ca734da794?w=150" alt="Moving Book 2" loading="lazy" width="150" height="200" />
           </div>
           <div className="floating-book book-3">
-            <img src="https://images.unsplash.com/photo-1629654297299-c8506221ca97?w=150" alt="Moving Book 3" />
+            <img src="https://images.unsplash.com/photo-1629654297299-c8506221ca97?w=150" alt="Moving Book 3" loading="lazy" width="150" height="200" />
           </div>
           <div className="floating-book book-4">
-            <img src="https://images.unsplash.com/photo-1541963463532-d68292c34b19?w=150" alt="Moving Book 4" />
+            <img src="https://images.unsplash.com/photo-1541963463532-d68292c34b19?w=150" alt="Moving Book 4" loading="lazy" width="150" height="200" />
           </div>
 
           <div className="hero-content">
@@ -210,6 +242,9 @@ export default function HomePage() {
                 src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&auto=format&fit=crop&q=60" 
                 alt="Featured Book Cover Mockup" 
                 className="showcase-cover"
+                loading="eager"
+                width="340"
+                height="420"
               />
               <div className="showcase-badge">
                 <i className="ri-verified-badge-fill text-gold"></i>
@@ -220,6 +255,7 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+
         </div>
       </section>
 
@@ -232,15 +268,23 @@ export default function HomePage() {
 
         <div className="categories-pills-slider">
           {categoriesList.map((cat) => (
-            <button
+            <Link
               key={cat.key}
+              to={cat.key === "all" ? "/" : `/category/${cat.key}`}
               className={`category-pill-btn ${selectedCategory === cat.key ? "active" : ""}`}
-              onClick={() => setSelectedCategory(cat.key)}
+              onClick={(e) => {
+                if (cat.key === "all") {
+                  e.preventDefault();
+                  setSelectedCategory("all");
+                }
+              }}
+              style={{ textDecoration: "none" }}
             >
               <i className={cat.icon}></i>
               <span>{cat.label}</span>
-            </button>
+            </Link>
           ))}
+
         </div>
       </section>
 
@@ -275,77 +319,148 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="listings-grid">
-            {listings.map((book) => (
-              <article key={book._id} className="book-card-item">
-                <div className="book-cover-frame">
-                  <img
-                    src={book.images?.[0] || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300"}
-                    alt={book.title}
-                    className="book-image"
-                  />
-                  <span className={`condition-tag cond-${book.condition || "good"}`}>
-                    {(book.condition || "good").replace("_", " ").toUpperCase()}
-                  </span>
-                </div>
+            {listings.map((book) => {
+              // Product structured data (JSON-LD) for each book listing
+              const productSchema = {
+                "@context": "https://schema.org",
+                "@type": "Product",
+                "name": book.title,
+                "description": `Buy second-hand textbook ${book.title} by ${book.author || "Unknown Author"} in ${book.condition || "good"} condition on PustakMart. Traded directly by student ${book.seller?.name || "peer"} on campus.`,
+                "image": book.images?.[0] || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300",
+                "offers": {
+                  "@type": "Offer",
+                  "price": book.price,
+                  "priceCurrency": "INR",
+                  "availability": "https://schema.org/InStock",
+                  "itemCondition": book.condition === "new" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition"
+                }
+              };
 
-                <div className="book-card-details">
-                  <div className="book-meta-top">
-                    <span className="book-category-label">{book.category}</span>
-                    {book.semester && <span className="book-sem-label">Sem {book.semester}</span>}
-                  </div>
+              return (
+                <article key={book._id} className="book-card-item">
+                  {/* Structured product schema dynamically generated */}
+                  <script type="application/ld+json">
+                    {JSON.stringify(productSchema)}
+                  </script>
 
-                  <h4 className="book-title">{book.title}</h4>
-                  <p className="book-author">By {book.author || "Unknown Author"}</p>
-
-                  <div className="rating-box">
-                    <div className="stars">
-                      <i className="ri-star-fill"></i>
-                      <i className="ri-star-fill"></i>
-                      <i className="ri-star-fill"></i>
-                      <i className="ri-star-fill"></i>
-                      <i className="ri-star-half-fill"></i>
-                    </div>
-                    <span>4.5</span>
-                  </div>
-
-                  <div className="seller-meta-strip">
+                  <div className="book-cover-frame">
                     <img
-                      src={book.seller?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"}
-                      alt="Seller avatar"
-                      className="seller-tiny-avatar"
+                      src={book.images?.[0] || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300"}
+                      alt={`${book.title} second hand textbook by ${book.author || "student"}`}
+                      loading="lazy"
+                      width="260"
+                      height="200"
+                      className="book-image"
                     />
-                    <div className="seller-tiny-info">
-                      <h5>{book.seller?.name || "College Student"}</h5>
-                      <p>{book.collegeName || "Verified College"}</p>
-                    </div>
-                    {book.seller?.sellerStatus === "verified" && (
-                      <i className="ri-verified-badge-fill verified-badge-icon" title="Verified Seller"></i>
-                    )}
+                    <span className={`condition-tag cond-${book.condition || "good"}`}>
+                      {(book.condition || "good").replace("_", " ").toUpperCase()}
+                    </span>
                   </div>
 
-                  <div className="book-card-footer">
-                    <div className="price-tag-block">
-                      <span className="price-val">₹{book.price}</span>
-                      {book.price > 300 && <span className="old-price">₹{Math.floor(book.price * 1.8)}</span>}
+                  <div className="book-card-details" style={{ display: "flex", flexDirection: "column", height: "calc(100% - 200px)" }}>
+                    <div className="book-meta-top">
+                      <Link to={`/category/${book.category}`} className="book-category-label" style={{ textDecoration: "none" }}>{book.category}</Link>
+                      {book.semester && <span className="book-sem-label">Sem {book.semester}</span>}
                     </div>
-                    
-                    <button 
-                      className="btn-card-buy"
-                      onClick={() => {
-                        if (!user) {
-                          navigate("/auth");
-                        } else {
-                          // Redirect to chat/exchange flow
-                          navigate("/dashboard");
-                        }
-                      }}
-                    >
-                      Buy Now
-                    </button>
+
+                    <h4 className="book-title">{book.title}</h4>
+                    <p className="book-author">By {book.author || "Unknown Author"}</p>
+
+                    <div className="rating-box">
+                      <div className="stars">
+                        <i className="ri-star-fill"></i>
+                        <i className="ri-star-fill"></i>
+                        <i className="ri-star-fill"></i>
+                        <i className="ri-star-fill"></i>
+                        <i className="ri-star-half-fill"></i>
+                      </div>
+                      <span>4.5</span>
+                    </div>
+
+                    <div className="seller-meta-strip" style={{ marginTop: "auto" }}>
+                      <img
+                        src={book.seller?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"}
+                        alt={`${book.seller?.name || "Seller"} student profile avatar`}
+                        loading="lazy"
+                        width="24"
+                        height="24"
+                        className="seller-tiny-avatar"
+                      />
+                      <div className="seller-tiny-info">
+                        <h5>{book.seller?.name || "College Student"}</h5>
+                        <p>{book.collegeName || "Verified College"}</p>
+                      </div>
+                      {book.seller?.sellerStatus === "verified" && (
+                        <i className="ri-verified-badge-fill verified-badge-icon" title="Verified Seller"></i>
+                      )}
+                    </div>
+
+                    {/* Social Growth Sharing Strip */}
+                    <div className="book-share-strip" style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "12px", borderTop: "1px solid var(--color-border-subtle)", paddingTop: "8px" }}>
+                      <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>Share:</span>
+                      <a 
+                        href={`https://api.whatsapp.com/send?text=Check%20out%20this%20used%20textbook%20%22${encodeURIComponent(book.title)}%22%20on%20PustakMart!%20https://pustakmart.com/`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        title="Share on WhatsApp"
+                        style={{ color: "#25D366", fontSize: "0.95rem" }}
+                      >
+                        <i className="ri-whatsapp-line"></i>
+                      </a>
+                      <a 
+                        href={`https://twitter.com/intent/tweet?text=Check%20out%20this%20used%20textbook%20%22${encodeURIComponent(book.title)}%22%20on%20PustakMart!&url=https://pustakmart.com/`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        title="Share on X"
+                        style={{ color: "#000000", fontSize: "0.95rem" }}
+                      >
+                        <i className="ri-twitter-x-line"></i>
+                      </a>
+                      <a 
+                        href={`https://www.facebook.com/sharer/sharer.php?u=https://pustakmart.com/`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        title="Share on Facebook"
+                        style={{ color: "#1877F2", fontSize: "0.95rem" }}
+                      >
+                        <i className="ri-facebook-box-line"></i>
+                      </a>
+                      <a 
+                        href={`https://www.linkedin.com/sharing/share-offsite/?url=https://pustakmart.com/`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        title="Share on LinkedIn"
+                        style={{ color: "#0A66C2", fontSize: "0.95rem" }}
+                      >
+                        <i className="ri-linkedin-box-line"></i>
+                      </a>
+                    </div>
+
+                    <div className="book-card-footer" style={{ marginTop: "12px", borderTop: "1px solid var(--color-border-subtle)", paddingTop: "8px" }}>
+                      <div className="price-tag-block">
+                        <span className="price-val">₹{book.price}</span>
+                        {book.price > 300 && <span className="old-price">₹{Math.floor(book.price * 1.8)}</span>}
+                      </div>
+                      
+                      <button 
+                        className="btn-card-buy"
+                        onClick={() => {
+                          if (!user) {
+                            navigate("/auth");
+                          } else {
+                            // Redirect to chat/exchange flow
+                            navigate("/dashboard");
+                          }
+                        }}
+                      >
+                        Buy Now
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
+
           </div>
         )}
       </section>
@@ -439,8 +554,8 @@ export default function HomePage() {
           <div className="footer-links-group">
             <h4>Quick Links</h4>
             <a href="#listings-browse" onClick={() => setSelectedCategory("all")}>Browse Catalog</a>
-            <a href="#listings-browse" onClick={() => setSelectedCategory("engineering")}>Engineering Branch</a>
-            <a href="#listings-browse" onClick={() => setSelectedCategory("novel")}>Novels Library</a>
+            <Link to="/category/engineering">Engineering Books</Link>
+            <Link to="/category/novel">Fiction Library</Link>
           </div>
 
           <div className="footer-links-group">
@@ -455,6 +570,7 @@ export default function HomePage() {
             <p><i className="ri-map-pin-line"></i> Available across all major engineering, medical, and science universities globally</p>
             <p><i className="ri-mail-line"></i> support@pustakmart.com</p>
           </div>
+
         </div>
 
         <div className="footer-bottom">
