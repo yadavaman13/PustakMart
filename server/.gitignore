@@ -1,9 +1,4 @@
 node_modules
 .env
 package-lock.json
-test_api.js
-test_email.js
-test_imagekit_upload.js
-test_payment.js
-test_phase2.js
-test_redis.js
+tests

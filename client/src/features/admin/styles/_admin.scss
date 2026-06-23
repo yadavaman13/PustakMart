@@ -1132,38 +1132,82 @@
   }
 }
 
-.id-pdf-frame {
+.document-download-card {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: $space-6;
-  border: 2px dashed var(--color-border-default);
-  border-radius: $radius-md;
+  justify-content: space-between;
+  padding: $space-4;
   background-color: var(--color-bg-surface-2);
-  gap: $space-2;
-  text-align: center;
+  border: 1px solid var(--color-border-default);
+  border-radius: $radius-lg;
+  margin-top: $space-2;
+  transition: box-shadow $duration-base;
 
-  i {
-    font-size: 40px;
-    color: #ef4444; // raw red for PDF
+  &:hover {
+    box-shadow: $shadow-sm;
   }
 
-  p {
-    font-size: $text-sm;
-    color: var(--color-text-secondary);
-    margin: 0;
+  .doc-info {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    min-width: 0;
+
+    .icon-box {
+      width: 44px;
+      height: 44px;
+      border-radius: $radius-md;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      &.pdf {
+        background-color: #fee2e2;
+        color: #ef4444;
+      }
+
+      &.image {
+        background-color: #e0f2fe;
+        color: #0284c7;
+      }
+
+      i {
+        font-size: 22px;
+      }
+    }
+
+    .text-box {
+      min-width: 0;
+      h6 {
+        margin: 0 0 2px 0;
+        font-size: $text-sm;
+        font-weight: 600;
+        color: var(--color-text-primary);
+      }
+      p {
+        margin: 0;
+        font-size: $text-xs;
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
   }
 
-  .btn-pdf-link {
-    display: inline-block;
-    padding: 6px 12px;
+  .btn-download {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     background-color: var(--color-brand);
     color: var(--color-text-on-brand);
-    border-radius: $radius-sm;
+    border: none;
+    padding: 8px 14px;
+    border-radius: $radius-md;
     font-size: $text-xs;
     font-weight: 600;
-    text-decoration: none;
+    cursor: pointer;
     transition: background-color $duration-base;
 
     &:hover {

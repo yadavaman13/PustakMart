@@ -83,6 +83,25 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleDownloadFile = async (url, fileName) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("Failed to download document:", err);
+      // Fallback: open in new tab
+      window.open(url, "_blank");
+    }
+  };
+
   return (
     <div className="admin-dashboard-container">
       
@@ -666,24 +685,39 @@ export default function AdminDashboardPage() {
               <div className="id-card-preview-block">
                 <h5>Uploaded Student Identity Card</h5>
                 {reviewSeller.collegeIdCard ? (
-                  reviewSeller.collegeIdCard.toLowerCase().endsWith(".pdf") ? (
-                    <div className="id-pdf-frame">
-                      <i className="ri-file-pdf-fill"></i>
-                      <p>Student ID uploaded as a PDF file</p>
-                      <a 
-                        href={reviewSeller.collegeIdCard} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="btn-pdf-link"
-                      >
-                        Open PDF in New Tab
-                      </a>
-                    </div>
-                  ) : (
-                    <div className="id-image-frame">
-                      <img src={reviewSeller.collegeIdCard} alt="Student ID Card Upload" />
-                    </div>
-                  )
+                  (() => {
+                    const isPdf = reviewSeller.collegeIdCard.toLowerCase().endsWith(".pdf");
+                    const fileName = reviewSeller.collegeIdCard.substring(reviewSeller.collegeIdCard.lastIndexOf('/') + 1).split('?')[0] || "student_id_card.pdf";
+                    return (
+                      <>
+                        <div className="document-download-card">
+                          <div className="doc-info">
+                            <div className={`icon-box ${isPdf ? 'pdf' : 'image'}`}>
+                              <i className={isPdf ? "ri-file-pdf-fill" : "ri-image-fill"}></i>
+                            </div>
+                            <div className="text-box">
+                              <h6>{isPdf ? "Student ID Card (PDF)" : "Student ID Card (Image)"}</h6>
+                              <p title={fileName}>{fileName}</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn-download"
+                            onClick={() => handleDownloadFile(reviewSeller.collegeIdCard, fileName)}
+                          >
+                            <i className="ri-download-2-line"></i> Download
+                          </button>
+                        </div>
+                        
+                        {/* If it's an image, also show a small visual preview below the download card */}
+                        {!isPdf && (
+                          <div className="id-image-frame" style={{ marginTop: "12px" }}>
+                            <img src={reviewSeller.collegeIdCard} alt="Student ID Card Upload" />
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()
                 ) : (
                   <div className="no-id-fallback">
                     <p>No student ID card document was uploaded by the user.</p>
