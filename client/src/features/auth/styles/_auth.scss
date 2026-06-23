@@ -1,0 +1,352 @@
+@use "../../shared/styles/variables" as *;
+
+.auth-page-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: $space-5;
+  background-color: var(--color-bg-page);
+  position: relative;
+  overflow: hidden;
+
+  // Premium background elements (geometric light gold glows for depth)
+  &::before, &::after {
+    content: '';
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(244, 180, 0, 0.05) 0%, rgba(244, 180, 0, 0) 70%);
+    z-index: $z-below;
+    pointer-events: none;
+  }
+
+  &::before {
+    top: -10%;
+    left: -5%;
+  }
+
+  &::after {
+    bottom: -10%;
+    right: -5%;
+  }
+}
+
+.auth-card {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: $radius-xl;
+  box-shadow: $shadow-lg;
+  width: 100%;
+  max-width: 440px;
+  padding: $space-8 $space-6;
+  animation: fadeIn $duration-slower $ease-default;
+  transition: border-color $duration-base $ease-default, box-shadow $duration-base $ease-default;
+
+  &:hover {
+    border-color: var(--color-border-medium);
+    box-shadow: $shadow-xl;
+  }
+
+  @media (min-width: $screen-sm) {
+    padding: $space-10 $space-8;
+  }
+}
+
+.auth-brand-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: $space-4;
+
+  img {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    border-radius: $radius-md;
+    border: 1px solid var(--color-border-subtle);
+    box-shadow: $shadow-sm;
+  }
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: $space-8;
+
+  h1 {
+    font-family: var(--font-heading);
+    font-size: $text-2xl;
+    font-weight: $weight-medium + 200; // 700
+    color: var(--color-text-primary);
+    margin-bottom: $space-2;
+    letter-spacing: -0.5px;
+    line-height: $leading-tight;
+  }
+
+  p {
+    font-size: $text-sm;
+    color: var(--color-text-secondary);
+    line-height: $leading-snug;
+  }
+}
+
+.auth-tabs {
+  display: flex;
+  background-color: var(--color-bg-surface-2);
+  border-radius: $radius-lg;
+  padding: $space-1;
+  margin-bottom: $space-6;
+  border: 1px solid var(--color-border-subtle);
+
+  .tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    padding: $space-2;
+    font-family: var(--font-heading);
+    font-weight: $weight-medium;
+    font-size: $text-sm;
+    border-radius: $radius-md;
+    cursor: pointer;
+    transition: $transition-colors;
+
+    &.active {
+      background-color: var(--color-brand);
+      color: var(--color-text-on-brand);
+      font-weight: $weight-medium + 100; // 600
+      box-shadow: $shadow-xs;
+    }
+
+    &:hover:not(.active) {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-surface-3);
+    }
+  }
+}
+
+.auth-form-group {
+  margin-bottom: $space-5;
+  text-align: left;
+
+  label {
+    display: block;
+    font-size: $text-xs;
+    font-weight: $weight-medium;
+    color: var(--color-text-secondary);
+    margin-bottom: $space-2;
+    letter-spacing: 0.3px;
+  }
+
+  input, select {
+    width: 100%;
+    background-color: var(--color-bg-surface-2);
+    border: 1px solid var(--color-border-default);
+    color: var(--color-text-primary);
+    padding: $space-3 $space-4;
+    font-size: $text-sm;
+    border-radius: $radius-md;
+    font-family: var(--font-sans);
+    transition: $transition-colors, box-shadow $duration-base $ease-default;
+
+    &::placeholder {
+      color: var(--color-text-tertiary);
+    }
+
+    &:focus {
+      border-color: var(--color-brand);
+      background-color: var(--color-bg-page);
+      box-shadow: $shadow-brand;
+    }
+
+    &:disabled {
+      background-color: var(--color-bg-surface-3);
+      color: var(--color-text-disabled);
+      cursor: not-allowed;
+    }
+  }
+
+  select option {
+    background-color: var(--color-bg-surface);
+    color: var(--color-text-primary);
+  }
+}
+
+.auth-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-4;
+}
+
+.auth-action-link {
+  display: inline-block;
+  font-size: $text-xs;
+  color: var(--color-text-brand);
+  text-decoration: none;
+  font-weight: $weight-medium;
+  margin-top: -$space-3;
+  margin-bottom: $space-6;
+  cursor: pointer;
+  transition: color $duration-base $ease-default;
+
+  &:hover {
+    color: var(--color-brand-active);
+    text-decoration: underline;
+  }
+}
+
+.btn-primary {
+  width: 100%;
+  background-color: var(--color-brand);
+  color: var(--color-text-on-brand);
+  border: none;
+  padding: $space-3 $space-5;
+  border-radius: $radius-md;
+  font-family: var(--font-heading);
+  font-size: $text-sm;
+  font-weight: $weight-medium + 100; // 600
+  cursor: pointer;
+  box-shadow: $shadow-sm;
+  transition: $transition-base;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+
+  &:hover:not(:disabled) {
+    background-color: var(--color-brand-hover);
+    box-shadow: $shadow-md;
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    background-color: var(--color-brand-active);
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    background-color: var(--color-border-medium);
+    color: var(--color-text-disabled);
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .btn-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(23, 23, 23, 0.1);
+    border-top-color: var(--color-text-on-brand);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+}
+
+.auth-error-alert {
+  background-color: var(--color-error-bg);
+  border: 1px solid var(--color-error);
+  color: var(--color-error-text);
+  border-radius: $radius-md;
+  padding: $space-3 $space-4;
+  font-size: $text-xs;
+  margin-bottom: $space-6;
+  text-align: left;
+  animation: fadeIn $duration-base $ease-default;
+  line-height: $leading-snug;
+}
+
+.auth-success-alert {
+  background-color: var(--color-success-bg);
+  border: 1px solid var(--color-success);
+  color: var(--color-success-text);
+  border-radius: $radius-md;
+  padding: $space-3 $space-4;
+  font-size: $text-xs;
+  margin-bottom: $space-6;
+  text-align: left;
+  animation: fadeIn $duration-base $ease-default;
+  line-height: $leading-snug;
+}
+
+/* OTP Verification Area */
+.otp-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: $space-2 0;
+
+  .otp-desc {
+    font-size: $text-sm;
+    color: var(--color-text-secondary);
+    margin-bottom: $space-6;
+    line-height: $leading-normal;
+
+    strong {
+      color: var(--color-text-primary);
+    }
+  }
+
+  .otp-input-group {
+    display: flex;
+    justify-content: center;
+    gap: $space-2;
+    margin-bottom: $space-6;
+
+    input {
+      width: 44px;
+      height: 44px;
+      text-align: center;
+      font-size: $text-xl;
+      font-weight: $weight-medium + 200; // 700
+      background-color: var(--color-bg-surface-2);
+      border: 1px solid var(--color-border-default);
+      color: var(--color-text-primary);
+      border-radius: $radius-md;
+      transition: $transition-base;
+
+      &:focus {
+        border-color: var(--color-brand);
+        background-color: var(--color-bg-page);
+        box-shadow: $shadow-brand;
+      }
+    }
+  }
+
+  .otp-timer {
+    font-size: $text-xs;
+    color: var(--color-text-secondary);
+    margin-bottom: $space-6;
+
+    span {
+      color: var(--color-text-brand);
+      font-weight: $weight-medium + 100;
+    }
+  }
+
+  .otp-resend {
+    font-size: $text-xs;
+    color: var(--color-text-secondary);
+    margin-top: $space-4;
+
+    .resend-btn {
+      background: none;
+      border: none;
+      color: var(--color-text-brand);
+      font-weight: $weight-medium + 100;
+      cursor: pointer;
+      padding: 0;
+      transition: color $duration-base $ease-default;
+
+      &:hover:not(:disabled) {
+        color: var(--color-brand-active);
+        text-decoration: underline;
+      }
+
+      &:disabled {
+        color: var(--color-text-disabled);
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+

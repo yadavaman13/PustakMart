@@ -1,12 +1,66 @@
-import mongoose from "mongoose"
-import express from "express"
-import { authRoute } from "./routes/auth.routes.js"
+import express from "express";
+import cookieParser from "cookie-parser";
+import morgan from "morgan";
+import cors from "cors";
+import envConfig from "./config/envConfig.js";
 
-const app = express()
+// Import routers
+import { authRoute } from "./routes/auth.routes.js";
+import { listingRoute } from "./routes/listing.routes.js";
+import { bookRequestRoute } from "./routes/bookrequests.routes.js";
+import { chatRoute } from "./routes/chats.routes.js";
+import { reviewRoute } from "./routes/reviews.routes.js";
+import { reportRoute } from "./routes/reports.routes.js";
+import { notificationRoute } from "./routes/notifications.routes.js";
+import { savedListingRoute } from "./routes/savedlistings.routes.js";
+import { feedRoute } from "./routes/feeds.routes.js";
+import { adminRoute } from "./routes/admin.routes.js";
+import { mediaRoute } from "./routes/media.routes.js";
+import { paymentRoute } from "./routes/payments.routes.js";
 
-app.use(express.json())
+const app = express();
 
-//importing all the routers
-app.use('/api/auth', authRoute)
+// Express CORS Configuration
+app.use(
+  cors({
+    origin: envConfig.isAllowedClientOrigin,
+    credentials: true,
+  })
+);
+
+app.use(express.json());
+app.use(cookieParser());
+app.use(morgan("dev"));
+
+// Mount Routers
+app.use("/api/auth", authRoute);
+app.use("/api/book", listingRoute);
+app.use("/api/requests", bookRequestRoute);
+app.use("/api/conversations", chatRoute);
+app.use("/api/reviews", reviewRoute);
+app.use("/api/reports", reportRoute);
+app.use("/api/notifications", notificationRoute);
+app.use("/api/saved-listings", savedListingRoute);
+app.use("/api/feeds", feedRoute);
+app.use("/api/admin", adminRoute);
+app.use("/api/media", mediaRoute);
+app.use("/api/payment", paymentRoute);
+
+// Catch-all route for unmatched paths (404)
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: `API Route not found: ${req.method} ${req.originalUrl}`,
+  });
+});
+
+// Global Error Handler Middleware
+app.use((err, req, res, next) => {
+  console.error("Unhandled server error:", err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "An unexpected internal server error occurred",
+  });
+});
 
 export default app;

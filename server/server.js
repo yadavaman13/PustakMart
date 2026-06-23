@@ -1,11 +1,20 @@
-import app from "./src/app.js"
-import { connectDB } from "./src/config/db.js"
-import dotenv from "dotenv"
+import http from "http";
+import app from "./src/app.js";
+import envConfig from "./src/config/envConfig.js";
+import { connectDB } from "./src/config/db.js";
+import { initSocket } from "./src/sockets/server.socket.js";
+import redis from "./src/config/cache.js";
 
-dotenv.config()
+// Database Connection
+connectDB();
 
-connectDB()
+// Create HTTP Server
+const server = http.createServer(app);
 
-app.listen(3000, (re,res) => {
-    console.log(`app is running on 3000 PORT`)
-})
+// Bind Socket.io to server
+initSocket(server);
+
+// Start Server
+server.listen(envConfig.PORT, () => {
+  console.log(`PustakMart server is running on port ${envConfig.PORT}`);
+});
