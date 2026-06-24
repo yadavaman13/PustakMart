@@ -42,7 +42,7 @@ const DashboardLayoutContent = () => {
           // Or simple unread counts:
           let unreadChats = 0;
           conversationsList.forEach(c => {
-            if (c.lastMessage && c.lastMessage.sender !== user._id && !c.lastMessage.isRead) {
+            if (c.lastMessage && c.lastMessage.sender !== (user.id || user._id) && !c.lastMessage.isRead) {
               unreadChats++;
             }
           });

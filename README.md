@@ -1,6 +1,6 @@
 <div align="center">
 
-# 📚 PustakMart
+#  PustakMart
 
 ### Verified Student-to-Student Campus Book Exchange
 

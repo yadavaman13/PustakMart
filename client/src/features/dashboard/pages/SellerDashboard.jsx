@@ -66,7 +66,7 @@ export const SellerDashboard = ({ activeTab }) => {
 
   useEffect(() => {
     clearAlerts();
-    if (activeTab === "overview") {
+    if (activeTab === "overview" || activeTab === "sales-analytics" || activeTab === "views") {
       fetchOverviewData();
     } else if (activeTab === "listings") {
       fetchSellerListings();
@@ -86,12 +86,12 @@ export const SellerDashboard = ({ activeTab }) => {
       setLoading(true);
       if (!user) return;
       // Get all active and sold listings of the seller
-      const res = await getHomeListingsApi({ seller: user._id, status: "all" });
+      const res = await getHomeListingsApi({ seller: user.id || user._id, status: "all" });
       if (res.success) {
         setSellerListings(res.listings || []);
       }
       
-      const reviewRes = await getSellerReviewsApi(user._id);
+      const reviewRes = await getSellerReviewsApi(user.id || user._id);
       if (reviewRes.success) {
         setReviews(reviewRes.data?.reviews || []);
       }
@@ -111,7 +111,7 @@ export const SellerDashboard = ({ activeTab }) => {
     try {
       setLoading(true);
       if (!user) return;
-      const res = await getHomeListingsApi({ seller: user._id, status: "all" });
+      const res = await getHomeListingsApi({ seller: user.id || user._id, status: "all" });
       if (res.success) {
         setSellerListings(res.listings || []);
       }
@@ -128,7 +128,7 @@ export const SellerDashboard = ({ activeTab }) => {
       const res = await getBookRequestsApi();
       if (res.success) {
         // Show only requests from OTHER users that match SVNIT or user's college
-        const filtered = (res.requests || []).filter(r => r.requestedBy?._id !== user?._id);
+        const filtered = (res.requests || []).filter(r => r.requestedBy?._id !== (user?.id || user?._id));
         setBuyerRequests(filtered);
       }
     } catch (err) {
@@ -142,7 +142,7 @@ export const SellerDashboard = ({ activeTab }) => {
     try {
       setLoading(true);
       if (!user) return;
-      const res = await getSellerReviewsApi(user._id);
+      const res = await getSellerReviewsApi(user.id || user._id);
       if (res.success) {
         setReviews(res.data?.reviews || []);
       }
@@ -816,13 +816,282 @@ export const SellerDashboard = ({ activeTab }) => {
         </div>
       )}
 
-      {/* --- 5. ANALYTICS VIEWS & REVIEWS TABS --- */}
-      {(activeTab === "sales-analytics" || activeTab === "views" || activeTab === "reviews") && !loading && (
+      {/* --- 5. SALES ANALYTICS VIEW --- */}
+      {activeTab === "sales-analytics" && !loading && (
         <div className="tab-view-container sales-analytics-view animate-fade">
+          <div className="grid-summary-metric-cards">
+            <div className="metric-box-card">
+              <div className="card-icon-circle seller-color"><i className="ri-money-dollar-circle-fill"></i></div>
+              <div className="card-numeric-info">
+                <h3>₹{sellerListings.filter(l => l.status === "sold").reduce((sum, l) => sum + (l.price || 0), 0)}</h3>
+                <p>Total Revenue</p>
+              </div>
+            </div>
+
+            <div className="metric-box-card">
+              <div className="card-icon-circle seller-color"><i className="ri-hand-coin-fill"></i></div>
+              <div className="card-numeric-info">
+                <h3>{soldCount}</h3>
+                <p>Books Sold</p>
+              </div>
+            </div>
+
+            <div className="metric-box-card">
+              <div className="card-icon-circle seller-color"><i className="ri-percent-fill"></i></div>
+              <div className="card-numeric-info">
+                <h3>{totalViews > 0 ? ((soldCount / totalViews) * 100).toFixed(1) : 0}%</h3>
+                <p>Conversion Rate</p>
+              </div>
+            </div>
+
+            <div className="metric-box-card">
+              <div className="card-icon-circle seller-color"><i className="ri-price-tag-3-fill"></i></div>
+              <div className="card-numeric-info">
+                <h3>₹{soldCount > 0 ? (sellerListings.filter(l => l.status === "sold").reduce((sum, l) => sum + (l.price || 0), 0) / soldCount).toFixed(0) : 0}</h3>
+                <p>Avg Book Price</p>
+              </div>
+            </div>
+          </div>
+
           <div className="split-view-container">
-            {/* Left: Stats chart review */}
+            {/* Left: Conversion Funnel */}
+            <div className="feed-panel listings-feed-panel">
+              <h2 className="panel-title-heading">Sales Conversion Funnel</h2>
+              <p className="panel-description-text">Tracks student buyer conversion from book pageview to successful trade.</p>
+              
+              <div className="funnel-container" style={{ marginTop: "20px" }}>
+                <div className="funnel-stage funnel-stage-views">
+                  <div className="stage-progress-bar" style={{ width: "100%" }}>
+                    <span className="stage-label"><i className="ri-eye-line"></i> 1. Views</span>
+                    <span className="stage-value">{totalViews} views (100%)</span>
+                  </div>
+                </div>
+
+                <div className="funnel-stage funnel-stage-chats">
+                  <div className="stage-progress-bar" style={{ width: totalViews > 0 ? `${Math.max(40, Math.min(100, (chats.length / totalViews) * 100))}%` : "50%" }}>
+                    <span className="stage-label"><i className="ri-chat-3-line"></i> 2. Chats</span>
+                    <span className="stage-value">{chats.length} inquiries ({totalViews > 0 ? ((chats.length / totalViews) * 100).toFixed(1) : 0}%)</span>
+                  </div>
+                </div>
+
+                <div className="funnel-stage funnel-stage-sales">
+                  <div className="stage-progress-bar" style={{ width: totalViews > 0 ? `${Math.max(25, Math.min(100, (soldCount / totalViews) * 100))}%` : "30%" }}>
+                    <span className="stage-label"><i className="ri-checkbox-circle-line"></i> 3. Sales</span>
+                    <span className="stage-value">{soldCount} sold ({totalViews > 0 ? ((soldCount / totalViews) * 100).toFixed(1) : 0}%)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="funnel-insight-summary">
+                <i className="ri-lightbulb-line"></i>
+                <p>Your views-to-sales conversion rate is <strong>{totalViews > 0 ? ((soldCount / totalViews) * 100).toFixed(1) : 0}%</strong>. Fast response times in Chat Inquiries will boost completion rates!</p>
+              </div>
+            </div>
+
+            {/* Right: Revenue by Category */}
+            <div className="feed-panel activity-feed-panel">
+              <h2 className="panel-title-heading">Revenue by Category</h2>
+              <p className="panel-description-text">Total revenue generated from academic book categories.</p>
+              
+              <div className="bar-charts-container" style={{ marginTop: "16px" }}>
+                <div className="chart-vertical-bars">
+                  {["Engineering", "Medical", "Management", "Novels", "Others"].map(cat => {
+                    const catSold = sellerListings.filter(l => l.category === cat && l.status === "sold");
+                    const catRev = catSold.reduce((sum, l) => sum + (l.price || 0), 0);
+                    const maxRevenue = Math.max(...["Engineering", "Medical", "Management", "Novels", "Others"].map(c => 
+                      sellerListings.filter(l => l.category === c && l.status === "sold").reduce((sum, l) => sum + (l.price || 0), 0)
+                    ), 1);
+                    const pct = (catRev / maxRevenue) * 100;
+                    return (
+                      <div className="chart-bar-row" key={cat}>
+                        <span className="bar-label">{cat}</span>
+                        <div className="bar-wrapper">
+                          <div className="bar-fill seller-color" style={{ width: `${Math.max(4, pct)}%` }}></div>
+                        </div>
+                        <span className="bar-value">₹{catRev}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- 6. TRAFFIC & VIEWS VIEW --- */}
+      {activeTab === "views" && !loading && (
+        <div className="tab-view-container views-traffic-view animate-fade">
+          <div className="grid-summary-metric-cards">
+            <div className="metric-box-card">
+              <div className="card-icon-circle seller-color"><i className="ri-eye-line"></i></div>
+              <div className="card-numeric-info">
+                <h3>{totalViews}</h3>
+                <p>Total Book Views</p>
+              </div>
+            </div>
+
+            <div className="metric-box-card">
+              <div className="card-icon-circle seller-color"><i className="ri-book-read-fill"></i></div>
+              <div className="card-numeric-info">
+                <h3>{sellerListings.length > 0 ? (totalViews / sellerListings.length).toFixed(1) : 0}</h3>
+                <p>Avg Views / Listing</p>
+              </div>
+            </div>
+
+            <div className="metric-box-card">
+              <div className="card-icon-circle seller-color"><i className="ri-line-chart-fill"></i></div>
+              <div className="card-numeric-info">
+                <h3>{sellerListings.length > 0 ? Math.max(...sellerListings.map(l => l.viewsCount || 0)) : 0}</h3>
+                <p>Max Book Views</p>
+              </div>
+            </div>
+
+            <div className="metric-box-card">
+              <div className="card-icon-circle seller-color"><i className="ri-folders-fill"></i></div>
+              <div className="card-numeric-info">
+                <h3>{sellerListings.length}</h3>
+                <p>Total Listings</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="split-view-container">
+            {/* Left: Traffic by Category */}
+            <div className="feed-panel listings-feed-panel">
+              <h2 className="panel-title-heading">Traffic by Category</h2>
+              <p className="panel-description-text">Distribution of traffic views across academic book categories.</p>
+              
+              <div className="bar-charts-container" style={{ marginTop: "16px" }}>
+                <div className="chart-vertical-bars">
+                  {["Engineering", "Medical", "Management", "Novels", "Others"].map(cat => {
+                    const catListings = sellerListings.filter(l => l.category === cat);
+                    const catViews = catListings.reduce((sum, l) => sum + (l.viewsCount || 0), 0);
+                    const maxViews = Math.max(...["Engineering", "Medical", "Management", "Novels", "Others"].map(c => 
+                      sellerListings.filter(l => l.category === c).reduce((sum, l) => sum + (l.viewsCount || 0), 0)
+                    ), 1);
+                    const pct = (catViews / maxViews) * 100;
+                    return (
+                      <div className="chart-bar-row" key={cat}>
+                        <span className="bar-label">{cat}</span>
+                        <div className="bar-wrapper">
+                          <div className="bar-fill seller-color" style={{ width: `${Math.max(4, pct)}%` }}></div>
+                        </div>
+                        <span className="bar-value">{catViews} views</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Most Viewed Book details */}
+            <div className="feed-panel activity-feed-panel">
+              <h2 className="panel-title-heading">Top Performing Book</h2>
+              <p className="panel-description-text">Detailed view of your most visited academic book listing.</p>
+              
+              {sellerListings.length > 0 ? (
+                (() => {
+                  const topBook = [...sellerListings].sort((a, b) => (b.viewsCount || 0) - (a.viewsCount || 0))[0];
+                  return (
+                    <div className="top-performing-book-widget" style={{ marginTop: "16px" }}>
+                      <div className="top-book-header" style={{ display: "flex", gap: "12px" }}>
+                        <img 
+                          src={topBook.images?.[0] || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/mock-imagekit-upload-1781805823490.png"} 
+                          alt={topBook.title}
+                          style={{ width: "64px", height: "64px", borderRadius: "8px", objectFit: "cover" }}
+                        />
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: "1rem", color: "var(--color-text-primary)" }}>{topBook.title}</h4>
+                          <span className={`status-badge ${topBook.status}`} style={{ marginTop: "4px" }}>{topBook.status}</span>
+                        </div>
+                      </div>
+                      <div className="top-book-stats-rows" style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                        <div className="row-item" style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
+                          <span style={{ color: "var(--color-text-secondary)" }}>Total Views</span>
+                          <strong>{topBook.viewsCount || 0} views</strong>
+                        </div>
+                        <div className="row-item" style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
+                          <span style={{ color: "var(--color-text-secondary)" }}>Price Tag</span>
+                          <strong>₹{topBook.price}</strong>
+                        </div>
+                        <div className="row-item" style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
+                          <span style={{ color: "var(--color-text-secondary)" }}>Category</span>
+                          <strong>{topBook.category}</strong>
+                        </div>
+                        <div className="row-item" style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
+                          <span style={{ color: "var(--color-text-secondary)" }}>Condition</span>
+                          <strong>{topBook.condition}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="empty-state-mini-box">
+                  <p>No listings views data available yet.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom Table: Full Listings View Counts */}
+          <div className="feed-panel manage-requests-panel" style={{ marginTop: "24px" }}>
+            <h2 className="panel-title-heading">Book Listing Traffic Inventory</h2>
+            <p className="panel-description-text">Full breakdown of pageviews and status across all your catalog listings.</p>
+            
+            <div className="requests-manage-table-wrapper" style={{ marginTop: "16px" }}>
+              {sellerListings.length > 0 ? (
+                <table className="requests-manage-table">
+                  <thead>
+                    <tr>
+                      <th>Book Title</th>
+                      <th>Category</th>
+                      <th>Price</th>
+                      <th>Condition</th>
+                      <th>Views</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sellerListings.map(book => (
+                      <tr key={book._id}>
+                        <td><strong>{book.title}</strong></td>
+                        <td>{book.category}</td>
+                        <td>₹{book.price}</td>
+                        <td><span className={`condition-indicator-tag ${book.condition}`}>{book.condition}</span></td>
+                        <td>
+                          <span className="views-badge" style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontWeight: "600" }}>
+                            <i className="ri-eye-line" style={{ color: "var(--color-brand-hover)" }}></i> {book.viewsCount || 0}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`status-badge ${book.status === "active" ? "open" : "fulfilled"}`}>
+                            {book.status === "active" ? "active" : "sold"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div style={{ padding: "24px", textAlign: "center", color: "var(--color-text-secondary)" }}>
+                  You have not published any book listings yet.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- 7. CUSTOMER REVIEWS VIEW --- */}
+      {activeTab === "reviews" && !loading && (
+        <div className="tab-view-container reviews-view animate-fade">
+          <div className="split-view-container">
+            {/* Left: Star breakdown */}
             <div className="feed-panel profile-metadata-panel">
-              <h2 className="panel-title-heading">Performance Dashboard</h2>
+              <h2 className="panel-title-heading">Rating Distribution</h2>
+              
               <div className="radial-rating-box">
                 <h2>{user?.averageRating || 0}</h2>
                 <div className="rating-stars">
@@ -830,29 +1099,32 @@ export const SellerDashboard = ({ activeTab }) => {
                     <i className={`ri-star-fill ${i < Math.round(user?.averageRating || 0) ? "text-gold" : "text-gray"}`} key={i}></i>
                   ))}
                 </div>
-                <p>Average Seller Rating ({user?.totalReviews || 0} reviews)</p>
+                <p>Average Seller Rating ({reviews.length} reviews)</p>
               </div>
 
-              <div className="metadata-table-rows">
-                <div className="row-item">
-                  <strong>Books Sold successfully</strong>
-                  <span>{user?.booksSold || 0} items</span>
-                </div>
-                <div className="row-item">
-                  <strong>Active Listings Online</strong>
-                  <span>{activeCount} items</span>
-                </div>
-                <div className="row-item">
-                  <strong>Aggregate Listing Views</strong>
-                  <span>{totalViews} views</span>
-                </div>
+              <div className="rating-distribution-stack" style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                {[5, 4, 3, 2, 1].map(star => {
+                  const count = reviews.filter(r => r.rating === star).length;
+                  const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+                  return (
+                    <div className="star-row-item" key={star} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.85rem" }}>
+                      <span style={{ minWidth: "30px", fontWeight: "600" }}>{star} ★</span>
+                      <div className="star-bar-wrapper" style={{ flex: 1, height: "8px", backgroundColor: "var(--color-bg-surface-3)", borderRadius: "4px", overflow: "hidden" }}>
+                        <div className="star-bar-fill" style={{ height: "100%", width: `${pct}%`, backgroundColor: "var(--color-brand)" }}></div>
+                      </div>
+                      <span style={{ minWidth: "20px", textAlign: "right", color: "var(--color-text-secondary)" }}>{count}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Right: Feedback Reviews List */}
+            {/* Right: Feedback reviews scroller list */}
             <div className="feed-panel settings-form-panel">
               <h2 className="panel-title-heading">Customer Reviews</h2>
-              <div className="reviews-scroller-box">
+              <p className="panel-description-text">Recent feedback and grades received from book buyers.</p>
+              
+              <div className="reviews-scroller-box" style={{ marginTop: "16px" }}>
                 {reviews.length > 0 ? (
                   reviews.map((r) => (
                     <div className="review-box-card" key={r._id}>
@@ -885,6 +1157,7 @@ export const SellerDashboard = ({ activeTab }) => {
         </div>
       )}
 
+
       {/* --- 6. MESSAGES VIEW (LIVE CHAT PANEL - SELLER PANEL REDIRECT) --- */}
       {activeTab === "messages" && !loading && (
         <div className="tab-view-container chat-workspace-view animate-fade">
@@ -895,7 +1168,7 @@ export const SellerDashboard = ({ activeTab }) => {
               <div className="channels-scroll-container">
                 {chats.length > 0 ? (
                   chats.map((chat) => {
-                    const recipient = chat.participants?.find(p => p._id !== user?._id);
+                    const recipient = chat.participants?.find(p => p._id !== (user?.id || user?._id));
                     const isActive = activeChat?._id === chat._id;
                     return (
                       <div 
@@ -925,10 +1198,10 @@ export const SellerDashboard = ({ activeTab }) => {
                 <>
                   <div className="chat-window-header">
                     <div className="recipient-info">
-                      <img src={activeChat.participants?.find(p => p._id !== user?._id)?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} alt="avatar" />
+                      <img src={activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} alt="avatar" />
                       <div>
-                        <h4>{activeChat.participants?.find(p => p._id !== user?._id)?.name}</h4>
-                        <p>{activeChat.participants?.find(p => p._id !== user?._id)?.collegeName || "SVNIT Customer"}</p>
+                        <h4>{activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.name}</h4>
+                        <p>{activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.collegeName || "SVNIT Customer"}</p>
                       </div>
                     </div>
                   </div>
@@ -936,7 +1209,7 @@ export const SellerDashboard = ({ activeTab }) => {
                   <div className="chat-messages-history-pane">
                     {chatMessages.length > 0 ? (
                       chatMessages.map((msg) => {
-                        const isMe = msg.sender === user?._id;
+                        const isMe = msg.sender === (user?.id || user?._id);
                         return (
                           <div className={`message-bubble-row ${isMe ? "sender-me" : "sender-them"}`} key={msg._id}>
                             <div className="bubble-content-card">
@@ -978,8 +1251,8 @@ export const SellerDashboard = ({ activeTab }) => {
         </div>
       )}
 
-      {/* --- 7. SELLER PROFILE, VERIFICATION VIEWS --- */}
-      {(activeTab === "seller-profile" || activeTab === "verification") && !loading && (
+      {/* --- 7. SELLER PROFILE VIEW --- */}
+      {activeTab === "seller-profile" && !loading && (
         <div className="tab-view-container profile-settings-view animate-fade">
           <div className="feed-panel full-width-form-panel">
             <h2 className="panel-title-heading">Seller Credentials & verification</h2>
@@ -994,7 +1267,7 @@ export const SellerDashboard = ({ activeTab }) => {
             <div className="metadata-table-rows margin-top-large">
               <div className="row-item">
                 <strong>Seller Badge ID</strong>
-                <span>PM_SLR_{user?._id?.substring(0, 10)?.toUpperCase()}</span>
+                <span>PM_SLR_{(user?.id || user?._id)?.substring(0, 10)?.toUpperCase()}</span>
               </div>
               <div className="row-item">
                 <strong>Registered College</strong>
@@ -1010,13 +1283,6 @@ export const SellerDashboard = ({ activeTab }) => {
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* --- 8. SELLER ACCOUNT SETTINGS VIEW --- */}
-      {activeTab === "settings" && !loading && (
-        <div className="tab-view-container profile-settings-view animate-fade">
-          <ProfileSettingsView showSellerStatus={false} />
         </div>
       )}
 

@@ -193,18 +193,6 @@ export const Sidebar = ({
                   active={activeTab === "seller-profile"} 
                   onClick={() => handleTabClick("seller-profile")} 
                 />
-                <SidebarItem 
-                  label="Verification Status" 
-                  icon="ri-shield-check-line" 
-                  active={activeTab === "verification"} 
-                  onClick={() => handleTabClick("verification")} 
-                />
-                <SidebarItem 
-                  label="Settings" 
-                  icon="ri-settings-line" 
-                  active={activeTab === "settings"} 
-                  onClick={() => handleTabClick("settings")} 
-                />
               </div>
             </>
           )}

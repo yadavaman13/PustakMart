@@ -965,12 +965,12 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
                   <div className="chat-window-header">
                     <div className="recipient-info">
                       <img 
-                        src={activeChat.participants?.find(p => p._id !== user?._id)?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} 
+                        src={activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} 
                         alt="User avatar" 
                       />
                       <div>
-                        <h4>{activeChat.participants?.find(p => p._id !== user?._id)?.name}</h4>
-                        <p>{activeChat.participants?.find(p => p._id !== user?._id)?.collegeName || "SVNIT Student"}</p>
+                        <h4>{activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.name}</h4>
+                        <p>{activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.collegeName || "SVNIT Student"}</p>
                       </div>
                     </div>
                   </div>
@@ -978,7 +978,7 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
                   <div className="chat-messages-history-pane">
                     {chatMessages.length > 0 ? (
                       chatMessages.map((msg) => {
-                        const isMe = msg.sender === user?._id;
+                        const isMe = msg.sender === (user?.id || user?._id);
                         return (
                           <div className={`message-bubble-row ${isMe ? "sender-me" : "sender-them"}`} key={msg._id}>
                             <div className="bubble-content-card">
