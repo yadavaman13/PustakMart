@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import useAuth from "../../auth/hooks/useAuth.js";
 import { 
   getHomeListingsApi, 
@@ -18,9 +19,11 @@ import {
   getImageKitAuthParamsApi
 } from "../services/dashboard.api.js";
 import axios from "axios";
+import ProfileSettingsView from "../components/ProfileSettingsView.jsx";
 
 export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
   const { user, checkSession } = useAuth();
+  const [, setSearchParams] = useSearchParams();
   
   // Shared Loader and Messages
   const [loading, setLoading] = useState(false);
@@ -1051,124 +1054,96 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
         </div>
       )}
 
-      {/* --- 7. PROFILE & SETTINGS VIEW --- */}
-      {(activeTab === "profile" || activeTab === "settings") && !loading && (
-        <div className="tab-view-container profile-settings-view animate-fade">
-          <div className="split-view-container">
-            {/* Left: User metadata card */}
-            <div className="feed-panel profile-metadata-panel">
-              <h2 className="panel-title-heading">Account Profile</h2>
-              
-              <div className="profile-badge-box">
+      {/* --- 7. PROFILE VIEW --- */}
+      {activeTab === "profile" && !loading && (
+        <div className="tab-view-container profile-view animate-fade">
+          <div className="profile-details-display-card">
+            <div className="profile-details-header">
+              <div className="avatar-display-large">
                 <img src={user?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} alt="Avatar" />
-                <h3>{user?.name}</h3>
-                <span className="user-role-badge">{user?.role?.toUpperCase()}</span>
-                {user?.sellerStatus === "verified" && (
-                  <span className="seller-verified-status-tag">
-                    <i className="ri-verified-badge-fill"></i> Verified Seller
-                  </span>
-                )}
+              </div>
+              <div className="header-info-box">
+                <h2>{user?.name}</h2>
+                <div className="roles-row-box">
+                  <span className="user-role-badge">{user?.role?.toUpperCase()}</span>
+                  {user?.sellerStatus === "verified" && (
+                    <span className="seller-verified-status-tag">
+                      <i className="ri-verified-badge-fill"></i> Verified Seller
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="details-info-grid">
+              <div className="detail-item-box">
+                <i className="ri-mail-line"></i>
+                <div className="detail-value-box">
+                  <span className="detail-label">Email Address</span>
+                  <span className="detail-val">{user?.email}</span>
+                </div>
               </div>
 
-              <div className="metadata-table-rows">
-                <div className="row-item">
-                  <strong>Email</strong>
-                  <span>{user?.email}</span>
+              <div className="detail-item-box">
+                <i className="ri-phone-line"></i>
+                <div className="detail-value-box">
+                  <span className="detail-label">Mobile Number</span>
+                  <span className="detail-val">{user?.mobileNumber || "Not configured"}</span>
                 </div>
-                <div className="row-item">
-                  <strong>Mobile Number</strong>
-                  <span>{user?.mobileNumber}</span>
+              </div>
+
+              <div className="detail-item-box">
+                <i className="ri-bank-line"></i>
+                <div className="detail-value-box">
+                  <span className="detail-label">College / University</span>
+                  <span className="detail-val">{user?.collegeName || "Not configured"}</span>
                 </div>
-                <div className="row-item">
-                  <strong>College</strong>
-                  <span>{user?.collegeName || "Not configured"}</span>
+              </div>
+
+              <div className="detail-item-box">
+                <i className="ri-git-branch-line"></i>
+                <div className="detail-value-box">
+                  <span className="detail-label">Department</span>
+                  <span className="detail-val">{user?.department || "Not configured"}</span>
                 </div>
-                <div className="row-item">
-                  <strong>Department</strong>
-                  <span>{user?.department || "Not configured"}</span>
+              </div>
+
+              <div className="detail-item-box">
+                <i className="ri-node-tree"></i>
+                <div className="detail-value-box">
+                  <span className="detail-label">Semester</span>
+                  <span className="detail-val">{user?.semester || "Not configured"}</span>
                 </div>
-                <div className="row-item">
-                  <strong>Seller Rating</strong>
-                  <span>
-                    <i className="ri-star-fill text-gold"></i> {user?.averageRating || 0} ({user?.totalReviews || 0} Reviews)
+              </div>
+
+              <div className="detail-item-box">
+                <i className="ri-star-line"></i>
+                <div className="detail-value-box">
+                  <span className="detail-label">Seller Rating</span>
+                  <span className="detail-val">
+                    {user?.averageRating || 0} ({user?.totalReviews || 0} Reviews)
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Right: Seller application or Edit form */}
-            <div className="feed-panel settings-form-panel">
-              {user?.sellerStatus !== "verified" ? (
-                <div className="seller-application-widget">
-                  <h3 className="section-subtitle">Apply for Seller Status</h3>
-                  <p className="application-info-text">
-                    Apply to unlock the **Seller Dashboard**. Publish listings, view book request pipelines, access analytics, and sell books to SVNIT students.
-                  </p>
-
-                  <div className="seller-status-tracker-box">
-                    <strong>Current Application Status:</strong>
-                    <span className={`status-pill ${user?.sellerStatus}`}>
-                      {user?.sellerStatus?.toUpperCase()?.replace("_", " ")}
-                    </span>
-                  </div>
-
-                  {user?.sellerStatus === "rejected" && (
-                    <div className="dashboard-alert-banner error-banner" style={{ position: "static", marginTop: "12px", marginBottom: "16px", borderRadius: "8px" }}>
-                      <p style={{ margin: 0, display: "flex", flexDirection: "column", gap: "4px" }}>
-                        <strong>Rejection Reason / Remarks:</strong>
-                        <span>{user?.sellerStatusComment || "Your previous application was rejected. Please re-upload a valid ID card."}</span>
-                      </p>
-                    </div>
-                  )}
-
-                  {(user?.sellerStatus === "not_applied" || user?.sellerStatus === "rejected") && (
-                    <form className="modern-upload-form" onSubmit={handleUploadAndSubmitSeller}>
-                      <div className="form-group-field">
-                        <label htmlFor="id-card">Upload Student ID Card *</label>
-                        <p className="field-hint">Upload a scan/photo of your SVNIT or other student ID card. (JPG, PNG, PDF supported, Max 2MB)</p>
-                        <input 
-                          type="file" 
-                          id="id-card" 
-                          accept="image/*,application/pdf"
-                          required
-                          onChange={(e) => setIdCardFile(e.target.files?.[0] || null)}
-                        />
-                      </div>
-                      
-                      <button 
-                        type="submit" 
-                        className="btn btn-brand btn-wide"
-                        disabled={!idCardFile || isUploading}
-                      >
-                        {isUploading ? (
-                          <>
-                            <div className="spinner-mini"></div> Submitting...
-                          </>
-                        ) : (
-                          "Submit Verification Document"
-                        )}
-                      </button>
-                    </form>
-                  )}
-
-                  {user?.sellerStatus === "pending" && (
-                    <div className="pending-review-banner-alert">
-                      <i className="ri-time-line"></i>
-                      <p>Our verification officers are currently auditing your student ID card upload. This typically takes 5-10 minutes. Please check back soon!</p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="seller-dashboard-intro">
-                  <div className="icon-success-box"><i className="ri-checkbox-circle-fill"></i></div>
-                  <h3>You are a Verified Seller!</h3>
-                  <p>You have full access to both Buyer and Seller views. Select **Seller Dashboard** from the sidebar dropdown mode switcher to manage your listings and business analytics.</p>
-                </div>
-              )}
+            <div className="profile-actions-footer">
+              <button className="btn btn-outline" onClick={() => setSearchParams({ mode: "user", tab: "settings" })}>
+                <i className="ri-settings-4-line"></i> Edit Profile & Settings
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* --- 8. SETTINGS VIEW --- */}
+      {activeTab === "settings" && !loading && (
+        <div className="tab-view-container profile-settings-view animate-fade">
+          <ProfileSettingsView showSellerStatus={true} />
+        </div>
+      )}
+
+
     </div>
   );
 };

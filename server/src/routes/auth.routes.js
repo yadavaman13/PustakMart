@@ -10,6 +10,8 @@ import {
   logoutUserController,
   getMeController,
   updateProfileController,
+  changePasswordController,
+  deleteAccountController,
   applySellerController,
   getUserPublicProfileController,
   adminGetPendingSellersController,
@@ -92,12 +94,21 @@ authRoute.post("/logout", authUser, logoutUserController);
  */
 authRoute.get("/me", authUser, getMeController);
 
+authRoute.put("/profile", authUser, updateProfileController);
+
 /**
- * @route PUT /api/auth/profile
- * @description Update user profile details
+ * @route PUT /api/auth/change-password
+ * @description Change user password while logged in
  * @access private
  */
-authRoute.put("/profile", authUser, updateProfileController);
+authRoute.put("/change-password", authUser, changePasswordController);
+
+/**
+ * @route DELETE /api/auth/delete-account
+ * @description Delete/Close own user account
+ * @access private
+ */
+authRoute.delete("/delete-account", authUser, deleteAccountController);
 
 /**
  * @route POST /api/auth/apply-seller

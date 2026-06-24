@@ -869,3 +869,93 @@ export async function resetPasswordController(req, res) {
   }
 }
 
+// 6. Change Password (Authenticated)
+export async function changePasswordController(req, res) {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const user = req.user;
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Both old password and new password are required",
+      });
+    }
+
+    const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid current password",
+      });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password changed successfully",
+    });
+  } catch (error) {
+    console.error("Change password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error changing password",
+      error: error.message,
+    });
+  }
+}
+
+// 7. Delete own Account (Authenticated)
+export async function deleteAccountController(req, res) {
+  try {
+    const { password } = req.body;
+    const user = req.user;
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: "Password confirmation is required to delete your account",
+      });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid confirmation password",
+      });
+    }
+
+    user.isDeleted = true;
+    user.deletedAt = new Date();
+    await user.save();
+
+    // Blacklist token if present
+    let token = req.cookies.token;
+    if (!token && req.headers.authorization) {
+      const parts = req.headers.authorization.split(" ");
+      if (parts[0] === "Bearer" && parts[1]) {
+        token = parts[1];
+      }
+    }
+    if (token) {
+      await blacklistTokenModel.create({ token });
+    }
+
+    res.clearCookie("token");
+    res.status(200).json({
+      success: true,
+      message: "Account deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete account error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error deleting account",
+      error: error.message,
+    });
+  }
+}
+

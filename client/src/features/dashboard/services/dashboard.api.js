@@ -118,3 +118,19 @@ export const getImageKitAuthParamsApi = async () => {
   const response = await api.get("/media/imagekit-auth");
   return response.data;
 };
+
+// 9. Profile & Settings management API
+export const updateProfileApi = async (data) => {
+  const response = await api.put("/auth/profile", data);
+  return response.data;
+};
+
+export const changePasswordApi = async (data) => {
+  const response = await api.put("/auth/change-password", data);
+  return response.data;
+};
+
+export const deleteAccountApi = async (data) => {
+  const response = await api.delete("/auth/delete-account", { data });
+  return response.data;
+};

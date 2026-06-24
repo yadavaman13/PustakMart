@@ -16,6 +16,7 @@ import {
   getImageKitAuthParamsApi
 } from "../services/dashboard.api.js";
 import axios from "axios";
+import ProfileSettingsView from "../components/ProfileSettingsView.jsx";
 
 export const SellerDashboard = ({ activeTab }) => {
   const { user, checkSession } = useAuth();
@@ -977,8 +978,8 @@ export const SellerDashboard = ({ activeTab }) => {
         </div>
       )}
 
-      {/* --- 7. SELLER PROFILE, VERIFICATION, SETTINGS VIEWS --- */}
-      {(activeTab === "seller-profile" || activeTab === "verification" || activeTab === "settings") && !loading && (
+      {/* --- 7. SELLER PROFILE, VERIFICATION VIEWS --- */}
+      {(activeTab === "seller-profile" || activeTab === "verification") && !loading && (
         <div className="tab-view-container profile-settings-view animate-fade">
           <div className="feed-panel full-width-form-panel">
             <h2 className="panel-title-heading">Seller Credentials & verification</h2>
@@ -1011,6 +1012,14 @@ export const SellerDashboard = ({ activeTab }) => {
           </div>
         </div>
       )}
+
+      {/* --- 8. SELLER ACCOUNT SETTINGS VIEW --- */}
+      {activeTab === "settings" && !loading && (
+        <div className="tab-view-container profile-settings-view animate-fade">
+          <ProfileSettingsView showSellerStatus={false} />
+        </div>
+      )}
+
     </div>
   );
 };
