@@ -87,7 +87,7 @@ export async function getListingsController(req, res) {
     const query = {};
 
     // Apply basic filters
-    if (category) query.category = category;
+    if (category) query.category = category.toLowerCase();
     if (department) query.department = department;
     if (semester) query.semester = Number(semester);
     if (listingType) query.listingType = listingType;

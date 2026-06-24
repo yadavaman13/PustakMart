@@ -26,6 +26,12 @@ export const SellerDashboard = ({ activeTab }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   // Business entities
   const [sellerListings, setSellerListings] = useState([]);
@@ -39,7 +45,7 @@ export const SellerDashboard = ({ activeTab }) => {
   const [bookDesc, setBookDesc] = useState("");
   const [bookPrice, setBookPrice] = useState("");
   const [bookCondition, setBookCondition] = useState("good");
-  const [bookCategory, setBookCategory] = useState("Engineering");
+  const [bookCategory, setBookCategory] = useState("engineering");
   const [bookDept, setBookDept] = useState("");
   const [bookSem, setBookSem] = useState("");
   const [bookAuthor, setBookAuthor] = useState("");
@@ -195,6 +201,21 @@ export const SellerDashboard = ({ activeTab }) => {
     return uploadRes.data.url;
   };
 
+  const handleBookCoverSelect = (e) => {
+    const file = e.target.files?.[0] || null;
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        showToast("Book cover photo must be smaller than 2MB.", "error");
+        setCoverFile(null);
+        return;
+      }
+      setCoverFile(file);
+      showToast("Cover photo selected.", "success");
+    } else {
+      setCoverFile(null);
+    }
+  };
+
   // Submit Listing Form
   const handleCreateListingSubmit = async (e) => {
     e.preventDefault();
@@ -206,8 +227,10 @@ export const SellerDashboard = ({ activeTab }) => {
 
       let imageUrls = [];
       if (coverFile) {
+        showToast("Uploading cover image to server...", "success");
         const url = await handleUploadImage(coverFile);
         imageUrls.push(url);
+        showToast("Cover photo uploaded successfully!", "success");
       } else {
         // fallback sample image
         imageUrls.push("https://ik.imagekit.io/cuq3fe9wm/PustakMart/mock-imagekit-upload-1781805823490.png");
@@ -229,6 +252,7 @@ export const SellerDashboard = ({ activeTab }) => {
       });
 
       if (res.success) {
+        showToast("Listing published successfully!", "success");
         setSuccess("Academic listing created successfully!");
         setBookTitle("");
         setBookDesc("");
@@ -247,6 +271,7 @@ export const SellerDashboard = ({ activeTab }) => {
       }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create listing");
+      showToast(err.response?.data?.message || "Failed to create listing", "error");
     } finally {
       setIsUploading(false);
     }
@@ -387,6 +412,19 @@ export const SellerDashboard = ({ activeTab }) => {
 
   return (
     <div className="seller-dashboard-wrapper">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`toast-notification-bubble ${toast.type}`}>
+          <div className="toast-content">
+            <i className={toast.type === "success" ? "ri-checkbox-circle-fill" : "ri-error-warning-fill"}></i>
+            <span>{toast.message}</span>
+          </div>
+          <button className="toast-close-btn" onClick={() => setToast(null)} aria-label="Close notification">
+            <i className="ri-close-line"></i>
+          </button>
+        </div>
+      )}
+
       {error && <div className="dashboard-alert-banner error-banner">{error}</div>}
       {success && <div className="dashboard-alert-banner success-banner">{success}</div>}
 
@@ -662,10 +700,11 @@ export const SellerDashboard = ({ activeTab }) => {
                     value={bookCondition}
                     onChange={(e) => setBookCondition(e.target.value)}
                   >
-                    <option value="brand_new">Brand New (Intact cover)</option>
+                    <option value="new">Brand New (Intact cover)</option>
                     <option value="like_new">Like New (Negligible marks)</option>
                     <option value="good">Good (Fully readable)</option>
                     <option value="fair">Fair (Visible signs of wear)</option>
+                    <option value="poor">Poor (Damaged/Marked)</option>
                   </select>
                 </div>
 
@@ -676,11 +715,12 @@ export const SellerDashboard = ({ activeTab }) => {
                     value={bookCategory}
                     onChange={(e) => setBookCategory(e.target.value)}
                   >
-                    <option value="Engineering">Engineering Reference</option>
-                    <option value="Medical">Medical Science</option>
-                    <option value="Management">Management studies</option>
-                    <option value="Novels">Novels & Fiction</option>
-                    <option value="Others">Others</option>
+                    <option value="engineering">Engineering Reference</option>
+                    <option value="medical">Medical Science</option>
+                    <option value="school">School Education</option>
+                    <option value="competitive_exam">Competitive Exams</option>
+                    <option value="novel">Novels & Fiction</option>
+                    <option value="other">Others</option>
                   </select>
                 </div>
               </div>
@@ -744,14 +784,23 @@ export const SellerDashboard = ({ activeTab }) => {
               </div>
 
               <div className="form-group-field">
-                <label htmlFor="cover-pic">Upload Book Cover Photo</label>
+                <label>Upload Book Cover Photo</label>
                 <p className="field-hint">Upload Cover. JPG, PNG supported. Max 2MB.</p>
-                <input 
-                  type="file" 
-                  id="cover-pic" 
-                  accept="image/*"
-                  onChange={(e) => setCoverFile(e.target.files?.[0] || null)}
-                />
+                <div className="custom-file-upload-wrapper" style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
+                  <label htmlFor="cover-pic" className="btn btn-outline btn-sm" style={{ cursor: "pointer", margin: 0 }}>
+                    <i className="ri-image-add-line"></i> {coverFile ? "Change Image" : "Choose Image"}
+                  </label>
+                  <input 
+                    type="file" 
+                    id="cover-pic" 
+                    accept="image/*"
+                    onChange={handleBookCoverSelect}
+                    style={{ display: "none" }}
+                  />
+                  <span className="file-name-preview" style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+                    {coverFile ? coverFile.name : "No image selected"}
+                  </span>
+                </div>
               </div>
 
               <button 
@@ -895,16 +944,23 @@ export const SellerDashboard = ({ activeTab }) => {
               
               <div className="bar-charts-container" style={{ marginTop: "16px" }}>
                 <div className="chart-vertical-bars">
-                  {["Engineering", "Medical", "Management", "Novels", "Others"].map(cat => {
-                    const catSold = sellerListings.filter(l => l.category === cat && l.status === "sold");
+                  {Object.entries({
+                    engineering: "Engineering",
+                    medical: "Medical",
+                    school: "School",
+                    competitive_exam: "Competitive",
+                    novel: "Novels",
+                    other: "Others"
+                  }).map(([cat, label]) => {
+                    const catSold = sellerListings.filter(l => l.category?.toLowerCase() === cat && l.status === "sold");
                     const catRev = catSold.reduce((sum, l) => sum + (l.price || 0), 0);
-                    const maxRevenue = Math.max(...["Engineering", "Medical", "Management", "Novels", "Others"].map(c => 
-                      sellerListings.filter(l => l.category === c && l.status === "sold").reduce((sum, l) => sum + (l.price || 0), 0)
+                    const maxRevenue = Math.max(...["engineering", "medical", "school", "competitive_exam", "novel", "other"].map(c => 
+                      sellerListings.filter(l => l.category?.toLowerCase() === c && l.status === "sold").reduce((sum, l) => sum + (l.price || 0), 0)
                     ), 1);
                     const pct = (catRev / maxRevenue) * 100;
                     return (
                       <div className="chart-bar-row" key={cat}>
-                        <span className="bar-label">{cat}</span>
+                        <span className="bar-label">{label}</span>
                         <div className="bar-wrapper">
                           <div className="bar-fill seller-color" style={{ width: `${Math.max(4, pct)}%` }}></div>
                         </div>
@@ -964,16 +1020,23 @@ export const SellerDashboard = ({ activeTab }) => {
               
               <div className="bar-charts-container" style={{ marginTop: "16px" }}>
                 <div className="chart-vertical-bars">
-                  {["Engineering", "Medical", "Management", "Novels", "Others"].map(cat => {
-                    const catListings = sellerListings.filter(l => l.category === cat);
+                  {Object.entries({
+                    engineering: "Engineering",
+                    medical: "Medical",
+                    school: "School",
+                    competitive_exam: "Competitive",
+                    novel: "Novels",
+                    other: "Others"
+                  }).map(([cat, label]) => {
+                    const catListings = sellerListings.filter(l => l.category?.toLowerCase() === cat);
                     const catViews = catListings.reduce((sum, l) => sum + (l.viewsCount || 0), 0);
-                    const maxViews = Math.max(...["Engineering", "Medical", "Management", "Novels", "Others"].map(c => 
-                      sellerListings.filter(l => l.category === c).reduce((sum, l) => sum + (l.viewsCount || 0), 0)
+                    const maxViews = Math.max(...["engineering", "medical", "school", "competitive_exam", "novel", "other"].map(c => 
+                      sellerListings.filter(l => l.category?.toLowerCase() === c).reduce((sum, l) => sum + (l.viewsCount || 0), 0)
                     ), 1);
                     const pct = (catViews / maxViews) * 100;
                     return (
                       <div className="chart-bar-row" key={cat}>
-                        <span className="bar-label">{cat}</span>
+                        <span className="bar-label">{label}</span>
                         <div className="bar-wrapper">
                           <div className="bar-fill seller-color" style={{ width: `${Math.max(4, pct)}%` }}></div>
                         </div>

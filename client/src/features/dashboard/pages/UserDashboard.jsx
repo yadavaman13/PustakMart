@@ -573,11 +573,12 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
                 onChange={(e) => setCategoryFilter(e.target.value)}
               >
                 <option value="">All Categories</option>
-                <option value="Engineering">Engineering</option>
-                <option value="Medical">Medical</option>
-                <option value="Management">Management</option>
-                <option value="Novels">Novels</option>
-                <option value="Others">Others</option>
+                <option value="engineering">Engineering</option>
+                <option value="medical">Medical</option>
+                <option value="school">School Books</option>
+                <option value="competitive_exam">Competitive Exams</option>
+                <option value="novel">Novels & Fiction</option>
+                <option value="other">Others</option>
               </select>
 
               <select 
