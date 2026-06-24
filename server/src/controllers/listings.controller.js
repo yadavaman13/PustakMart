@@ -53,6 +53,7 @@ export async function createBookListingController(req, res) {
     });
 
     res.status(201).json({
+      success: true,
       message: "Listing created successfully",
       listing,
     });
@@ -159,6 +160,7 @@ export async function getListingsController(req, res) {
     const paginatedListings = listings.slice(startIndex, endIndex);
 
     res.status(200).json({
+      success: true,
       message: "Listings retrieved successfully",
       total: listings.length,
       page: pageNum,
@@ -194,6 +196,7 @@ export async function getListingByIdController(req, res) {
     }
 
     res.status(200).json({
+      success: true,
       message: "Listing details retrieved successfully",
       listing,
     });
@@ -258,6 +261,7 @@ export async function updateListingController(req, res) {
     await listing.save();
 
     res.status(200).json({
+      success: true,
       message: "Listing updated successfully",
       listing,
     });
@@ -292,6 +296,7 @@ export async function deleteListingController(req, res) {
     await listing.save();
 
     res.status(200).json({
+      success: true,
       message: "Listing marked as removed successfully",
     });
   } catch (error) {
@@ -336,6 +341,7 @@ export async function markListingAsSoldController(req, res) {
     }
 
     res.status(200).json({
+      success: true,
       message: "Listing marked as sold. Seller statistics updated.",
       listing,
     });

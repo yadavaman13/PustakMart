@@ -5,6 +5,7 @@ import {
   getBookRequestsApi, 
   createBookRequestApi, 
   deleteBookRequestApi,
+  updateBookRequestApi,
   getSavedListingsApi, 
   toggleSaveListingApi,
   getConversationsApi, 
@@ -44,6 +45,9 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
   const [newRequestBudget, setNewRequestBudget] = useState("");
   const [newRequestDept, setNewRequestDept] = useState("");
   const [newRequestSem, setNewRequestSem] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [requestsLimit, setRequestsLimit] = useState(5);
 
   // Chat/Messages State
   const [activeChat, setActiveChat] = useState(null);
@@ -58,6 +62,13 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
   const clearAlerts = () => {
     setError(null);
     setSuccess(null);
+  };
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 4000);
   };
 
   useEffect(() => {
@@ -119,9 +130,9 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
     }
   };
 
-  const fetchBookRequests = async () => {
+  const fetchBookRequests = async (showLoader = true) => {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       const res = await getBookRequestsApi();
       if (res.success) {
         setRequests(res.requests || []);
@@ -129,7 +140,7 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
     } catch (err) {
       setError("Failed to retrieve requests list");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
@@ -185,14 +196,13 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
         // reload bookmarks or modify inline
         if (activeTab === "saved") {
           setSavedBooks(prev => prev.filter(b => b.listing?._id !== id));
+          showToast(res.message || "Removed from bookmarks", "success");
         } else {
-          // Toast or message
-          setSuccess(res.message);
-          setTimeout(clearAlerts, 2000);
+          showToast(res.message || "Bookmarked successfully", "success");
         }
       }
     } catch (err) {
-      setError("Failed to bookmark listing");
+      showToast("Failed to toggle bookmark", "error");
     }
   };
 
@@ -201,7 +211,8 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
     e.preventDefault();
     if (!newRequestTitle.trim()) return;
     try {
-      setLoading(true);
+      setIsSubmitting(true);
+      clearAlerts();
       const res = await createBookRequestApi({
         title: newRequestTitle,
         description: newRequestDesc,
@@ -210,19 +221,19 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
         semester: newRequestSem
       });
       if (res.success) {
-        setSuccess("Book request submitted successfully!");
+        showToast("Book request created successfully", "success");
         setNewRequestTitle("");
         setNewRequestDesc("");
         setNewRequestBudget("");
         setNewRequestDept("");
         setNewRequestSem("");
-        fetchBookRequests();
-        setTimeout(clearAlerts, 3000);
+        await fetchBookRequests(false);
       }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create book request");
+      showToast(err.response?.data?.message || "Failed to create book request", "error");
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -232,12 +243,28 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
       setLoading(true);
       const res = await deleteBookRequestApi(id);
       if (res.success) {
-        setSuccess("Request cancelled successfully");
+        showToast("Request cancelled successfully", "success");
         setRequests(prev => prev.filter(r => r._id !== id));
-        setTimeout(clearAlerts, 2000);
       }
     } catch (err) {
-      setError("Failed to delete request");
+      showToast("Failed to delete request", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Toggle Book Request Status (fulfilled/open)
+  const handleToggleRequestStatus = async (id, currentStatus) => {
+    try {
+      setLoading(true);
+      const nextStatus = currentStatus === "open" ? "fulfilled" : "open";
+      const res = await updateBookRequestApi(id, { status: nextStatus });
+      if (res.success) {
+        showToast(`Request marked as ${nextStatus} successfully`, "success");
+        await fetchBookRequests(false);
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to update request status", "error");
     } finally {
       setLoading(false);
     }
@@ -388,6 +415,19 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
   // Render Subviews depending on tab parameter
   return (
     <div className="user-dashboard-wrapper">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`toast-notification-bubble ${toast.type}`}>
+          <div className="toast-content">
+            <i className={toast.type === "success" ? "ri-checkbox-circle-fill" : "ri-error-warning-fill"}></i>
+            <span>{toast.message}</span>
+          </div>
+          <button className="toast-close-btn" onClick={() => setToast(null)}>
+            <i className="ri-close-line"></i>
+          </button>
+        </div>
+      )}
+
       {/* Dynamic Notifications alert banner */}
       {error && <div className="dashboard-alert-banner error-banner">{error}</div>}
       {success && <div className="dashboard-alert-banner success-banner">{success}</div>}
@@ -414,7 +454,7 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
             <div className="metric-box-card">
               <div className="card-icon-circle user-color"><i className="ri-question-answer-fill"></i></div>
               <div className="card-numeric-info">
-                <h3>{requests.filter(r => r.requestedBy?._id === user?._id).length}</h3>
+                <h3>{requests.filter(r => r.requestedBy?._id === (user?._id || user?.id)).length}</h3>
                 <p>Active Requests</p>
               </div>
             </div>
@@ -664,7 +704,14 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
                   />
                 </div>
 
-                <button type="submit" className="btn btn-brand btn-wide">Submit Request</button>
+                <button type="submit" className="btn btn-brand btn-wide" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <span className="loading-spinner-xs"></span>
+                      Submitting...
+                    </>
+                  ) : "Submit Request"}
+                </button>
               </form>
             </div>
 
@@ -672,58 +719,146 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
             <div className="feed-panel requests-list-panel">
               <h2 className="panel-title-heading">Current Open Requests</h2>
               <div className="requests-vertical-stack">
-                {requests.length > 0 ? (
-                  requests.map((req) => (
-                    <div className="request-card-box" key={req._id}>
-                      <div className="request-card-header">
-                        <h4>{req.title}</h4>
-                        {req.requestedBy?._id === user?._id && (
-                          <button 
-                            className="btn-trash-icon" 
-                            onClick={() => handleDeleteRequest(req._id)}
-                            title="Delete Request"
-                          >
-                            <i className="ri-delete-bin-line"></i>
-                          </button>
-                        )}
-                      </div>
-                      <p className="request-desc">{req.description || "No description provided."}</p>
-                      
-                      <div className="request-meta-tags">
-                        {req.budget && <span className="meta-tag badge-budget">₹{req.budget}</span>}
-                        {req.semester && <span className="meta-tag">Sem {req.semester}</span>}
-                        {req.department && <span className="meta-tag">{req.department}</span>}
-                      </div>
-
-                      <div className="request-card-footer">
-                        <div className="student-profile-mini">
-                          <img 
-                            src={req.requestedBy?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} 
-                            alt="Avatar" 
-                          />
-                          <span>Requested by {req.requestedBy?.name || "Student"}</span>
+                {requests.filter(req => req.status === "open").length > 0 ? (
+                  requests
+                    .filter(req => req.status === "open")
+                    .slice(0, requestsLimit)
+                    .map((req) => (
+                      <div className="request-card-box" key={req._id}>
+                        <div className="request-card-header">
+                          <h4>{req.title}</h4>
+                          {req.requestedBy?._id === (user?._id || user?.id) && (
+                            <button 
+                              className="btn-trash-icon" 
+                              onClick={() => handleDeleteRequest(req._id)}
+                              title="Delete Request"
+                            >
+                              <i className="ri-delete-bin-line"></i>
+                            </button>
+                          )}
                         </div>
-                        {req.requestedBy?._id !== user?._id && (
-                          <button 
-                            className="btn btn-brand btn-xs"
-                            onClick={() => {
-                              // Direct chat on request
-                              setError("Chatting directly about a request is handled through listing chat channels. Contact requester.");
-                              setTimeout(clearAlerts, 3000);
-                            }}
-                          >
-                            Contact
-                          </button>
-                        )}
+                        <p className="request-desc">{req.description || "No description provided."}</p>
+                        
+                        <div className="request-meta-tags">
+                          {req.budget && <span className="meta-tag badge-budget">₹{req.budget}</span>}
+                          {req.semester && <span className="meta-tag">Sem {req.semester}</span>}
+                          {req.department && <span className="meta-tag">{req.department}</span>}
+                        </div>
+
+                        <div className="request-card-footer">
+                          <div className="student-profile-mini">
+                            <img 
+                              src={req.requestedBy?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} 
+                              alt="Avatar" 
+                            />
+                            <span>Requested by {req.requestedBy?.name || "Student"}</span>
+                          </div>
+                          {req.requestedBy?._id !== (user?._id || user?.id) && (
+                            <button 
+                              className="btn btn-brand btn-xs"
+                              onClick={() => {
+                                // Direct chat on request
+                                setError("Chatting directly about a request is handled through listing chat channels. Contact requester.");
+                                setTimeout(clearAlerts, 3000);
+                              }}
+                            >
+                              Contact
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    ))
                 ) : (
                   <div className="empty-state-mini-box">
                     <p>No open student requests found.</p>
                   </div>
                 )}
               </div>
+
+              {requests.filter(req => req.status === "open").length > requestsLimit && (
+                <div style={{ marginTop: "16px", textAlign: "center" }}>
+                  <button 
+                    className="btn btn-outline btn-sm btn-wide" 
+                    onClick={() => setRequestsLimit(prev => prev + 5)}
+                  >
+                    Show More Requests
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom full-width panel: Manage My Requests */}
+          <div className="feed-panel manage-requests-panel">
+            <h2 className="panel-title-heading">My Created Book Requests</h2>
+            <p className="panel-description-text">Track, fulfill, reopen, or cancel your published book requests.</p>
+            
+            <div className="requests-manage-table-wrapper">
+              {requests.filter(r => r.requestedBy?._id === (user?._id || user?.id)).length > 0 ? (
+                <table className="requests-manage-table">
+                  <thead>
+                    <tr>
+                      <th>Book Title</th>
+                      <th>Description</th>
+                      <th>Budget</th>
+                      <th>Sem / Dept</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {requests
+                      .filter(r => r.requestedBy?._id === (user?._id || user?.id))
+                      .map((req) => (
+                        <tr key={req._id}>
+                          <td><strong>{req.title}</strong></td>
+                          <td className="desc-cell" title={req.description}>
+                            {req.description || "No description provided."}
+                          </td>
+                          <td>{req.budget ? `₹${req.budget}` : "N/A"}</td>
+                          <td>
+                            Sem {req.semester || "N/A"} / {req.department || "N/A"}
+                          </td>
+                          <td>
+                            <span className={`status-badge ${req.status}`}>
+                              {req.status}
+                            </span>
+                          </td>
+                          <td className="actions-cell">
+                            {req.status === "open" ? (
+                              <button 
+                                className="btn btn-success btn-xs"
+                                onClick={() => handleToggleRequestStatus(req._id, "open")}
+                                title="Mark as Fulfilled"
+                              >
+                                Fulfill
+                              </button>
+                            ) : (
+                              <button 
+                                className="btn btn-brand btn-xs"
+                                onClick={() => handleToggleRequestStatus(req._id, req.status)}
+                                title="Reopen Request"
+                              >
+                                Reopen
+                              </button>
+                            )}
+                            <button 
+                              className="btn btn-outline-danger btn-xs"
+                              onClick={() => handleDeleteRequest(req._id)}
+                              title="Delete Request"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div style={{ padding: "24px", textAlign: "center", color: "var(--color-text-secondary)" }}>
+                  You have not published any book requests yet.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -791,7 +926,7 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
               <div className="channels-scroll-container">
                 {chats.length > 0 ? (
                   chats.map((chat) => {
-                    const recipient = chat.participants?.find(p => p._id !== user?._id);
+                    const recipient = chat.participants?.find(p => p._id !== (user?._id || user?.id));
                     const isActive = activeChat?._id === chat._id;
                     return (
                       <div 

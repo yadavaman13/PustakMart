@@ -938,6 +938,23 @@
   flex-direction: column;
   gap: $space-4;
   margin-top: $space-3;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: $space-2;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-border-medium);
+    border-radius: 3px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-border-strong);
+  }
 }
 
 .request-card-box {
@@ -1268,7 +1285,7 @@
 /* 5.3 Book Catalog Grid Card style */
 .horizontal-listings-grid, .vertical-catalog-items-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: $space-5;
   margin-top: $space-4;
 }
@@ -1388,10 +1405,21 @@
       margin-top: $space-3;
       
       .btn {
-        flex: 1;
-        text-align: center;
         font-size: 11px;
-        padding: $space-2 0;
+        padding: 0 10px;
+        height: 32px;
+        
+        &:first-child {
+          flex: 0 0 auto;
+          min-width: 36px;
+        }
+
+        &:last-child {
+          flex: 1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
       }
     }
   }
@@ -2205,3 +2233,196 @@
 .animate-fade {
   animation: fadeIn 0.35s ease-out;
 }
+
+/* Spinner within buttons */
+.loading-spinner-xs {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(23, 23, 23, 0.2);
+  border-top-color: var(--color-text-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-right: $space-2;
+}
+
+/* Toast Notifications */
+.toast-notification-bubble {
+  position: fixed;
+  top: $space-6;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: $z-toast;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-4;
+  min-width: 320px;
+  max-width: 450px;
+  padding: $space-3 $space-4;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-xl;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  animation: slideDown $duration-slow $ease-default;
+  backdrop-filter: blur(12px);
+
+  &.success {
+    border-left: 4px solid var(--color-success);
+    background-color: rgba(220, 252, 231, 0.95);
+    color: var(--color-success-text);
+
+    i {
+      color: var(--color-success);
+    }
+  }
+
+  &.error {
+    border-left: 4px solid var(--color-error);
+    background-color: rgba(254, 226, 226, 0.95);
+    color: var(--color-error-text);
+
+    i {
+      color: var(--color-error);
+    }
+  }
+
+  .toast-content {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    font-size: $text-sm;
+    font-weight: 500;
+
+    i {
+      font-size: 20px;
+    }
+  }
+
+  .toast-close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: $space-1;
+    color: currentColor;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity $duration-fast ease;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+[data-theme="dark"] {
+  .toast-notification-bubble {
+    background-color: rgba(23, 23, 23, 0.95);
+    border-color: var(--color-border-default);
+
+    &.success {
+      background-color: rgba(22, 163, 74, 0.15);
+      color: #86EFAC;
+      border-left: 4px solid var(--color-success);
+    }
+
+    &.error {
+      background-color: rgba(220, 28, 28, 0.15);
+      color: #FCA5A5;
+      border-left: 4px solid var(--color-error);
+    }
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateX(-50%) translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Manage User Requests Panel */
+.manage-requests-panel {
+  margin-top: $space-8;
+  
+  .requests-manage-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--color-border-default);
+    border-radius: $radius-lg;
+    background-color: var(--color-bg-surface);
+    box-shadow: $shadow-xs;
+  }
+
+  .requests-manage-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: $text-sm;
+    text-align: left;
+
+    th, td {
+      padding: $space-4;
+      border-bottom: 1px solid var(--color-border-subtle);
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    th {
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      background-color: var(--color-bg-surface-2);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .desc-cell {
+      max-width: 250px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: $radius-full;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: capitalize;
+
+    &.open {
+      background-color: var(--color-warning-bg);
+      color: var(--color-warning-text);
+      border: 1px solid rgba(217, 119, 6, 0.25);
+    }
+
+    &.fulfilled {
+      background-color: var(--color-success-bg);
+      color: var(--color-success-text);
+      border: 1px solid rgba(22, 163, 74, 0.25);
+    }
+
+    &.cancelled {
+      background-color: var(--color-error-bg);
+      color: var(--color-error-text);
+      border: 1px solid rgba(220, 38, 38, 0.25);
+    }
+  }
+
+  .actions-cell {
+    display: flex;
+    gap: $space-2;
+  }
+}
+

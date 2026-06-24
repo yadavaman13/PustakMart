@@ -25,6 +25,7 @@ export async function createBookRequestController(req, res) {
     });
 
     res.status(201).json({
+      success: true,
       message: "Book request created successfully",
       bookRequest,
     });
@@ -70,6 +71,7 @@ export async function getBookRequestsController(req, res) {
     });
 
     res.status(200).json({
+      success: true,
       message: "Book requests retrieved successfully",
       count: requests.length,
       requests,
@@ -96,6 +98,7 @@ export async function getBookRequestByIdController(req, res) {
     }
 
     res.status(200).json({
+      success: true,
       message: "Book request retrieved successfully",
       bookRequest,
     });
@@ -142,6 +145,7 @@ export async function updateBookRequestController(req, res) {
     await bookRequest.save();
 
     res.status(200).json({
+      success: true,
       message: "Book request updated successfully",
       bookRequest,
     });
@@ -175,6 +179,7 @@ export async function deleteBookRequestController(req, res) {
     await bookRequestModel.findByIdAndDelete(id);
 
     res.status(200).json({
+      success: true,
       message: "Book request deleted successfully",
     });
   } catch (error) {

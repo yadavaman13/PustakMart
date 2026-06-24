@@ -48,6 +48,11 @@ export const deleteBookRequestApi = async (id) => {
   return response.data;
 };
 
+export const updateBookRequestApi = async (id, data) => {
+  const response = await api.put(`/requests/${id}`, data);
+  return response.data;
+};
+
 // 3. Saved Listings (Bookmarks) API
 export const getSavedListingsApi = async () => {
   const response = await api.get("/saved-listings");
