@@ -1,5 +1,116 @@
 @use "../../shared/styles/variables" as *;
 
+/* ==========================================================================
+   BUTTON DESIGN SYSTEM (styles.md rules)
+   ========================================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  font-family: var(--font-sans);
+  font-weight: $weight-medium;
+  font-size: $text-sm;
+  height: 36px;
+  padding: 0 $space-4;
+  border-radius: $radius-md;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: $transition-colors;
+  user-select: none;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+
+  /* Wide Modifier */
+  &.btn-wide {
+    width: 100%;
+  }
+
+  /* Large Modifier */
+  &.btn-lg {
+    height: 44px;
+    padding: 0 $space-5;
+    border-radius: $radius-lg;
+    font-size: $text-base;
+  }
+
+  /* Small/Extra-Small Modifier */
+  &.btn-sm, &.btn-xs {
+    height: 28px;
+    padding: 0 $space-3;
+    border-radius: $radius-sm;
+    font-size: $text-xs;
+  }
+
+  /* Primary Button (gold) */
+  &.btn-brand {
+    background-color: var(--color-brand);
+    color: var(--color-text-on-brand);
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-brand-hover);
+    }
+
+    &:active:not(:disabled) {
+      background-color: var(--color-brand-active);
+    }
+
+    &:disabled {
+      background-color: var(--color-brand-light);
+      color: rgba(23, 23, 23, 0.38);
+      opacity: 0.6;
+    }
+  }
+
+  /* Secondary Button (outlined) */
+  &.btn-outline {
+    background-color: transparent;
+    border: 1px solid var(--color-border-medium);
+    color: var(--color-text-primary);
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-bg-surface-2);
+    }
+
+    &:active:not(:disabled) {
+      background-color: var(--color-bg-surface-3);
+    }
+  }
+
+  /* Danger Button */
+  &.btn-outline-danger, &.btn-danger {
+    background-color: var(--color-error-bg);
+    border: 1px solid rgba(220, 38, 38, 0.20);
+    color: var(--color-error-text);
+
+    &:hover:not(:disabled) {
+      background-color: #FECACA; /* $red-200 */
+    }
+
+    &:active:not(:disabled) {
+      background-color: #FECACA;
+    }
+  }
+
+  /* Success Button */
+  &.btn-success {
+    background-color: var(--color-success-bg);
+    border: 1px solid rgba(22, 163, 74, 0.30);
+    color: var(--color-success-text);
+
+    &:hover:not(:disabled) {
+      background-color: #BBF7D0; /* $green-200 */
+    }
+
+    &:active:not(:disabled) {
+      background-color: #BBF7D0;
+    }
+  }
+}
+
 /* Layout container details */
 .dashboard-main-layout-container {
   display: flex;
