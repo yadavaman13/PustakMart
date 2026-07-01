@@ -328,8 +328,27 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
       console.log("Socket message received:", data);
       if (activeChat && activeChat._id === data.conversationId) {
         setChatMessages(prev => {
-          // Avoid duplicate UI rendering (e.g. from optimistic send)
+          // Avoid duplicate UI rendering (e.g. from duplicate socket events)
           if (prev.some(m => m._id === data.message._id)) return prev;
+
+          // If the message is from me, replace the corresponding optimistic message
+          const myId = user?.id || user?._id;
+          if (data.message.sender === myId) {
+            const tempIndex = prev.findIndex(m => 
+              m._id.toString().startsWith("temp_") && 
+              (m.message === data.message.message || m.content === data.message.message)
+            );
+            if (tempIndex !== -1) {
+              const updated = [...prev];
+              updated[tempIndex] = {
+                ...data.message,
+                content: data.message.message
+              };
+              return updated;
+            }
+          }
+
+          // Otherwise, append the message
           return [...prev, {
             ...data.message,
             content: data.message.message

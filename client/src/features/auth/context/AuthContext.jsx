@@ -41,7 +41,6 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      setLoading(true);
       setError(null);
       const res = await loginApi(email, password);
       if (res.success && res.data?.user) {
@@ -53,27 +52,21 @@ export const AuthProvider = ({ children }) => {
       const msg = err.response?.data?.message || "Invalid email or password";
       setError(msg);
       return { success: false, message: msg };
-    } finally {
-      setLoading(false);
     }
   };
 
   const logout = async () => {
     try {
-      setLoading(true);
       await logoutApi();
       setUser(null);
       return { success: true };
     } catch (err) {
       return { success: false, message: "Logout failed" };
-    } finally {
-      setLoading(false);
     }
   };
 
   const sendRegisterOtp = async (userData) => {
     try {
-      setLoading(true);
       setError(null);
       const res = await registerSendOtpApi(userData);
       return res;
@@ -81,14 +74,11 @@ export const AuthProvider = ({ children }) => {
       const msg = err.response?.data?.message || "Failed to send registration OTP";
       setError(msg);
       return { success: false, message: msg };
-    } finally {
-      setLoading(false);
     }
   };
 
   const verifyRegisterOtp = async (email, otp) => {
     try {
-      setLoading(true);
       setError(null);
       const res = await registerVerifyOtpApi(email, otp);
       if (res.success && res.data?.user) {
@@ -100,14 +90,11 @@ export const AuthProvider = ({ children }) => {
       const msg = err.response?.data?.message || "Invalid OTP code";
       setError(msg);
       return { success: false, message: msg };
-    } finally {
-      setLoading(false);
     }
   };
 
   const resendRegisterOtp = async (email) => {
     try {
-      setLoading(true);
       setError(null);
       const res = await registerResendOtpApi(email);
       return res;
@@ -115,14 +102,11 @@ export const AuthProvider = ({ children }) => {
       const msg = err.response?.data?.message || "Failed to resend OTP";
       setError(msg);
       return { success: false, message: msg };
-    } finally {
-      setLoading(false);
     }
   };
 
   const sendForgotOtp = async (email) => {
     try {
-      setLoading(true);
       setError(null);
       const res = await forgotPasswordSendOtpApi(email);
       return res;
@@ -130,14 +114,11 @@ export const AuthProvider = ({ children }) => {
       const msg = err.response?.data?.message || "Failed to send forgot password OTP";
       setError(msg);
       return { success: false, message: msg };
-    } finally {
-      setLoading(false);
     }
   };
 
   const verifyForgotOtp = async (email, otp) => {
     try {
-      setLoading(true);
       setError(null);
       const res = await forgotPasswordVerifyOtpApi(email, otp);
       return res; // Contains resetToken on success
@@ -145,14 +126,11 @@ export const AuthProvider = ({ children }) => {
       const msg = err.response?.data?.message || "Invalid OTP code";
       setError(msg);
       return { success: false, message: msg };
-    } finally {
-      setLoading(false);
     }
   };
 
   const resetPassword = async (email, resetToken, newPassword) => {
     try {
-      setLoading(true);
       setError(null);
       const res = await resetPasswordApi(email, resetToken, newPassword);
       return res;
@@ -160,8 +138,6 @@ export const AuthProvider = ({ children }) => {
       const msg = err.response?.data?.message || "Failed to reset password";
       setError(msg);
       return { success: false, message: msg };
-    } finally {
-      setLoading(false);
     }
   };
 
