@@ -2,13 +2,16 @@ import { paymentModel } from "../models/payment.model.js";
 import { listingModel } from "../models/listing.model.js";
 import { userModel } from "../models/user.model.js";
 import { notificationModel } from "../models/notification.model.js";
+import { couponModel } from "../models/coupon.model.js";
+import { messageModel } from "../models/message.model.js";
+import { conversationModel } from "../models/conversation.model.js";
 import { createRazorpayOrder, verifyRazorpaySignature } from "../services/payment/razorpay.service.js";
 import { emitToUser } from "../sockets/server.socket.js";
 
 // Initialize checkout order for a listing
 export async function createPaymentOrderController(req, res) {
   try {
-    const { listingId } = req.body;
+    const { listingId, couponCode } = req.body;
 
     if (!listingId) {
       return res.status(400).json({
@@ -33,8 +36,30 @@ export async function createPaymentOrderController(req, res) {
       });
     }
 
+    // Check for optional coupon code price deduction
+    let discount = 0;
+    let coupon = null;
+    if (couponCode) {
+      coupon = await couponModel.findOne({
+        code: couponCode.toUpperCase(),
+        listing: listingId,
+        buyer: req.user._id,
+        isUsed: false,
+      });
+
+      if (!coupon) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid, expired, or unauthorized coupon code",
+        });
+      }
+      discount = coupon.discountAmount;
+    }
+
+    const finalPrice = Math.max(0, listing.price - discount);
+
     // Convert amount to paise subunit (lowest currency subunit)
-    const amountInPaise = Math.round(listing.price * 100);
+    const amountInPaise = Math.round(finalPrice * 100);
 
     // Create Razorpay Order
     const order = await createRazorpayOrder(amountInPaise, "INR");
@@ -47,6 +72,7 @@ export async function createPaymentOrderController(req, res) {
       status: "pending",
       buyer: req.user._id,
       listing: listingId,
+      coupon: coupon ? coupon._id : undefined,
     });
 
     res.status(201).json({
@@ -97,6 +123,11 @@ export async function verifyPaymentController(req, res) {
       payment.status = "completed";
       await payment.save();
 
+      // Mark coupon as used if applied
+      if (payment.coupon) {
+        await couponModel.findByIdAndUpdate(payment.coupon, { isUsed: true });
+      }
+
       // Update Listing status to "sold"
       const listing = await listingModel.findById(payment.listing);
       if (listing) {
@@ -117,11 +148,45 @@ export async function verifyPaymentController(req, res) {
           message: `Your book "${listing.title}" has been purchased successfully by ${req.user.name}!`,
         });
 
-        // Dispatch real-time Socket.io message to seller
+        // Dispatch real-time Socket.io notification to seller
         emitToUser(listing.seller, "notification", {
           type: "offer",
           message: `Your book "${listing.title}" has been purchased!`,
         });
+
+        // Add a system notification message inside the chat thread
+        const conversation = await conversationModel.findOne({
+          listing: payment.listing,
+          buyer: payment.buyer,
+        });
+
+        if (conversation) {
+          const systemMsg = await messageModel.create({
+            conversation: conversation._id,
+            sender: payment.buyer,
+            message: `Book purchased successfully by ${req.user.name}!`,
+            messageType: "system",
+          });
+
+          conversation.lastMessage = systemMsg._id;
+          conversation.lastMessageAt = systemMsg.createdAt;
+          await conversation.save();
+
+          // Dispatch live messages to update chat UI in real-time
+          const liveMsgPayload = {
+            conversationId: conversation._id,
+            message: {
+              _id: systemMsg._id,
+              sender: payment.buyer,
+              message: systemMsg.message,
+              messageType: "system",
+              createdAt: systemMsg.createdAt,
+            },
+          };
+
+          emitToUser(listing.seller.toString(), "message_received", liveMsgPayload);
+          emitToUser(payment.buyer.toString(), "message_received", liveMsgPayload);
+        }
       }
 
       res.status(200).json({

@@ -13,8 +13,12 @@ import {
   getConversationMessagesApi,
   sendMessageApi,
   getSellerReviewsApi,
-  getImageKitAuthParamsApi
+  getImageKitAuthParamsApi,
+  acceptConversationApi,
+  rejectConversationApi,
+  generateCouponApi
 } from "../services/dashboard.api.js";
+import { useSocket } from "../../shared/context/SocketContext.jsx";
 import axios from "axios";
 import ProfileSettingsView from "../components/ProfileSettingsView.jsx";
 
@@ -61,9 +65,18 @@ export const SellerDashboard = ({ activeTab }) => {
   const [editCondition, setEditCondition] = useState("good");
 
   // Chat window states
+  const socket = useSocket();
   const [activeChat, setActiveChat] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
+  const [chatSubTab, setChatSubTab] = useState("requests"); // "requests" (pending) or "chats" (accepted)
+  const [chatSearchQuery, setChatSearchQuery] = useState("");
+  const [otherPartyTyping, setOtherPartyTyping] = useState(false);
+
+  // Seller coupon creation state
+  const [showCouponModal, setShowCouponModal] = useState(false);
+  const [couponDiscountAmount, setCouponDiscountAmount] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
 
   const clearAlerts = () => {
     setError(null);
@@ -352,13 +365,148 @@ export const SellerDashboard = ({ activeTab }) => {
     }
   };
 
+  // Socket.io Real-Time Event Listener binding
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleMessageReceived = (data) => {
+      console.log("Seller socket message received:", data);
+      if (activeChat && activeChat._id === data.conversationId) {
+        setChatMessages(prev => {
+          if (prev.some(m => m._id === data.message._id)) return prev;
+          return [...prev, {
+            ...data.message,
+            content: data.message.message
+          }];
+        });
+        
+        // Auto emit message_read event to clear badges
+        socket.emit("message_read", {
+          conversationId: activeChat._id,
+          recipientId: activeChat.buyer === (user?.id || user?._id) ? activeChat.seller : activeChat.buyer
+        });
+      }
+
+      // Update conversations sidebar values in real-time
+      setChats(prev => prev.map(c => {
+        if (c._id === data.conversationId) {
+          const isSenderMe = data.message.sender === (user?.id || user?._id);
+          const isCurrentActive = activeChat && activeChat._id === data.conversationId;
+          return {
+            ...c,
+            lastMessage: {
+              _id: data.message._id,
+              content: data.message.message,
+              sender: data.message.sender,
+              createdAt: data.message.createdAt
+            },
+            lastMessageAt: data.message.createdAt,
+            unreadCountBuyer: (!isSenderMe && !isCurrentActive && c.buyer === (user?.id || user?._id)) ? (c.unreadCountBuyer || 0) + 1 : c.unreadCountBuyer,
+            unreadCountSeller: (!isSenderMe && !isCurrentActive && c.seller === (user?.id || user?._id)) ? (c.unreadCountSeller || 0) + 1 : c.unreadCountSeller,
+          };
+        }
+        return c;
+      }));
+    };
+
+    const handleConversationAccepted = (data) => {
+      console.log("Socket conversation accepted:", data);
+      if (activeChat && activeChat._id === data.conversationId) {
+        setActiveChat(prev => ({ ...prev, status: "accepted" }));
+        if (data.systemMessage) {
+          setChatMessages(prev => [...prev, {
+            ...data.systemMessage,
+            content: data.systemMessage.message
+          }]);
+        }
+      }
+      setChats(prev => prev.map(c => c._id === data.conversationId ? { ...c, status: "accepted" } : c));
+    };
+
+    const handleConversationRejected = (data) => {
+      console.log("Socket conversation rejected:", data);
+      if (activeChat && activeChat._id === data.conversationId) {
+        setActiveChat(prev => ({ ...prev, status: "rejected" }));
+        if (data.systemMessage) {
+          setChatMessages(prev => [...prev, {
+            ...data.systemMessage,
+            content: data.systemMessage.message
+          }]);
+        }
+      }
+      setChats(prev => prev.map(c => c._id === data.conversationId ? { ...c, status: "rejected" } : c));
+    };
+
+    const handleTypingStart = (data) => {
+      if (activeChat && activeChat._id === data.conversationId) {
+        setOtherPartyTyping(true);
+      }
+    };
+
+    const handleTypingStop = (data) => {
+      if (activeChat && activeChat._id === data.conversationId) {
+        setOtherPartyTyping(false);
+      }
+    };
+
+    const handleMessageRead = (data) => {
+      if (activeChat && activeChat._id === data.conversationId) {
+        setChatMessages(prev => prev.map(m => m.sender === (user?.id || user?._id) ? { ...m, isRead: true } : m));
+      }
+    };
+
+    // Listen to new conversation requests (when a buyer starts a chat)
+    const handleConversationRequest = (data) => {
+      console.log("New conversation request received:", data);
+      // Refresh chats list to display the new request
+      fetchConversations();
+      showToast(`New chat request from ${data.buyer?.name || "Buyer"}!`, "info");
+    };
+
+    socket.on("message_received", handleMessageReceived);
+    socket.on("conversation_accepted", handleConversationAccepted);
+    socket.on("conversation_rejected", handleConversationRejected);
+    socket.on("typing_start", handleTypingStart);
+    socket.on("typing_stop", handleTypingStop);
+    socket.on("message_read", handleMessageRead);
+    socket.on("conversation_request", handleConversationRequest);
+
+    return () => {
+      socket.off("message_received", handleMessageReceived);
+      socket.off("conversation_accepted", handleConversationAccepted);
+      socket.off("conversation_rejected", handleConversationRejected);
+      socket.off("typing_start", handleTypingStart);
+      socket.off("typing_stop", handleTypingStop);
+      socket.off("message_read", handleMessageRead);
+      socket.off("conversation_request", handleConversationRequest);
+    };
+  }, [socket, activeChat, user]);
+
   // Message chat handlers
   const handleSelectChat = async (chat) => {
     setActiveChat(chat);
+    setOtherPartyTyping(false);
     try {
       const res = await getConversationMessagesApi(chat._id);
       if (res.success) {
-        setChatMessages(res.data?.messages || []);
+        const messages = res.data?.messages || [];
+        const mappedMessages = messages.map(m => ({
+          ...m,
+          content: m.message
+        }));
+        setChatMessages(mappedMessages);
+
+        // Emit message_read receipt
+        if (socket) {
+          const otherUserId = chat.buyer === (user?.id || user?._id) ? chat.seller : chat.buyer;
+          socket.emit("message_read", {
+            conversationId: chat._id,
+            recipientId: otherUserId
+          });
+        }
+
+        // Reset unread badges count in local state
+        setChats(prev => prev.map(c => c._id === chat._id ? { ...c, unreadCountBuyer: 0, unreadCountSeller: 0 } : c));
       }
     } catch (err) {
       setError("Failed to load message log");
@@ -372,38 +520,162 @@ export const SellerDashboard = ({ activeTab }) => {
     const content = chatInput;
     setChatInput("");
 
+    // Stop typing socket notification
+    if (socket) {
+      const otherUserId = activeChat.buyer === (user?.id || user?._id) ? activeChat.seller : activeChat.buyer;
+      socket.emit("typing_stop", {
+        conversationId: activeChat._id,
+        recipientId: otherUserId
+      });
+    }
+
     try {
-      const res = await sendMessageApi(activeChat._id, content);
-      if (res.success) {
-        setChatMessages(prev => [...prev, res.data?.message]);
-        setChats(prev => prev.map(c => c._id === activeChat._id ? { ...c, lastMessage: res.data?.message } : c));
+      if (socket && socket.connected) {
+        socket.emit("send_message", {
+          conversationId: activeChat._id,
+          message: content
+        });
+
+        // Optimistic UI update
+        const tempMsgId = "temp_" + Date.now();
+        setChatMessages(prev => [...prev, {
+          _id: tempMsgId,
+          sender: user?.id || user?._id,
+          content,
+          message: content,
+          messageType: "text",
+          createdAt: new Date().toISOString()
+        }]);
+      } else {
+        // Fallback HTTP
+        const res = await sendMessageApi(activeChat._id, content);
+        if (res.success) {
+          setChatMessages(prev => [...prev, {
+            ...res.data?.message,
+            content: res.data?.message?.message
+          }]);
+          setChats(prev => prev.map(c => c._id === activeChat._id ? { ...c, lastMessage: res.data?.message } : c));
+        }
       }
     } catch (err) {
       setError("Failed to send message");
     }
   };
 
-  // Live Chat Polling (10s interval when chat is active)
-  useEffect(() => {
-    if (!activeChat || activeTab !== "messages") return;
-    
-    const pollMessages = async () => {
-      try {
-        const res = await getConversationMessagesApi(activeChat._id);
+  const handleChatInputChange = (e) => {
+    setChatInput(e.target.value);
+    if (!socket || !activeChat) return;
+
+    const otherUserId = activeChat.buyer === (user?.id || user?._id) ? activeChat.seller : activeChat.buyer;
+    if (!otherUserId) return;
+
+    socket.emit("typing_start", {
+      conversationId: activeChat._id,
+      recipientId: otherUserId
+    });
+
+    if (window.typingTimeout) clearTimeout(window.typingTimeout);
+    window.typingTimeout = setTimeout(() => {
+      socket.emit("typing_stop", {
+        conversationId: activeChat._id,
+        recipientId: otherUserId
+      });
+    }, 1500);
+  };
+
+  // --- Seller Conversation Action handlers ---
+  const handleAcceptChat = async (chatId) => {
+    try {
+      setLoading(true);
+      if (socket && socket.connected) {
+        socket.emit("accept_conversation", { conversationId: chatId });
+        showToast("Conversation request accepted!", "success");
+        // Reload list and active state after timeout
+        setTimeout(async () => {
+          await fetchConversations();
+          if (activeChat && activeChat._id === chatId) {
+            handleSelectChat({ ...activeChat, status: "accepted" });
+          }
+        }, 300);
+      } else {
+        const res = await acceptConversationApi(chatId);
         if (res.success) {
-          const msgs = res.data?.messages || [];
-          if (msgs.length !== chatMessages.length) {
-            setChatMessages(msgs);
+          showToast("Conversation request accepted!", "success");
+          await fetchConversations();
+          if (activeChat && activeChat._id === chatId) {
+            handleSelectChat(res.data.conversation);
           }
         }
-      } catch (err) {
-        console.error(err);
       }
-    };
+    } catch (err) {
+      setError("Error accepting chat request");
+      setTimeout(clearAlerts, 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const interval = setInterval(pollMessages, 10000);
-    return () => clearInterval(interval);
-  }, [activeChat, chatMessages.length, activeTab]);
+  const handleRejectChat = async (chatId) => {
+    try {
+      setLoading(true);
+      if (socket && socket.connected) {
+        socket.emit("reject_conversation", { conversationId: chatId });
+        showToast("Conversation request declined.", "info");
+        setTimeout(async () => {
+          await fetchConversations();
+          if (activeChat && activeChat._id === chatId) {
+            handleSelectChat({ ...activeChat, status: "rejected" });
+          }
+        }, 300);
+      } else {
+        const res = await rejectConversationApi(chatId);
+        if (res.success) {
+          showToast("Conversation request declined.", "info");
+          await fetchConversations();
+          if (activeChat && activeChat._id === chatId) {
+            handleSelectChat(res.data.conversation);
+          }
+        }
+      }
+    } catch (err) {
+      setError("Error declining chat request");
+      setTimeout(clearAlerts, 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- Seller Coupon creation handlers ---
+  const handleOpenCouponCreator = () => {
+    setCouponDiscountAmount("");
+    setShowCouponModal(true);
+  };
+
+  const handleGenerateCouponCode = async (e) => {
+    e.preventDefault();
+    if (!activeChat || !couponDiscountAmount || Number(couponDiscountAmount) <= 0) return;
+    setCouponLoading(true);
+    try {
+      const res = await generateCouponApi(activeChat._id, Number(couponDiscountAmount));
+      if (res.success) {
+        showToast(`Discount coupon generated successfully! Code: ${res.data.coupon?.code}`, "success");
+        setShowCouponModal(false);
+        
+        // Optimistically add system message announcing discount code
+        if (res.data.systemMessage) {
+          setChatMessages(prev => [...prev, {
+            ...res.data.systemMessage,
+            content: res.data.systemMessage.message
+          }]);
+        }
+      }
+    } catch (err) {
+      setError("Failed to generate coupon: " + (err.response?.data?.message || err.message));
+      setTimeout(clearAlerts, 4000);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
 
   // Metrics computation for dashboard Overview
   const activeCount = sellerListings.filter(l => l.status === "active").length;
@@ -1227,57 +1499,203 @@ export const SellerDashboard = ({ activeTab }) => {
           <div className="chat-layout-split-box">
             {/* Left: Chat Channels List */}
             <div className="channels-sidebar-list">
-              <h3>Customer Conversations</h3>
+              <div style={{ padding: "12px", borderBottom: "1px solid var(--color-border-default)" }}>
+                <input 
+                  type="text" 
+                  placeholder="Search buyer or book..." 
+                  className="form-control"
+                  style={{ width: "100%", padding: "6px 12px", fontSize: "12px", borderRadius: "16px", border: "1px solid var(--color-border-medium)" }}
+                  value={chatSearchQuery}
+                  onChange={(e) => setChatSearchQuery(e.target.value)}
+                />
+              </div>
+              <div style={{ display: "flex", borderBottom: "1px solid var(--color-border-default)" }}>
+                <button 
+                  className={`btn-subtab ${chatSubTab === "chats" ? "active" : ""}`}
+                  style={{ flex: 1, padding: "8px", border: "none", background: "none", fontSize: "12px", fontWeight: "600", borderBottom: chatSubTab === "chats" ? "2px solid var(--color-brand)" : "none", color: chatSubTab === "chats" ? "var(--color-brand)" : "var(--color-text-secondary)" }}
+                  onClick={() => setChatSubTab("chats")}
+                >
+                  Active Chats
+                </button>
+                <button 
+                  className={`btn-subtab ${chatSubTab === "requests" ? "active" : ""}`}
+                  style={{ flex: 1, padding: "8px", border: "none", background: "none", fontSize: "12px", fontWeight: "600", borderBottom: chatSubTab === "requests" ? "2px solid var(--color-brand)" : "none", color: chatSubTab === "requests" ? "var(--color-brand)" : "var(--color-text-secondary)" }}
+                  onClick={() => setChatSubTab("requests")}
+                >
+                  Pending Requests
+                </button>
+              </div>
+
               <div className="channels-scroll-container">
                 {chats.length > 0 ? (
-                  chats.map((chat) => {
-                    const recipient = chat.participants?.find(p => p._id !== (user?.id || user?._id));
-                    const isActive = activeChat?._id === chat._id;
-                    return (
-                      <div 
-                        className={`channel-row-item ${isActive ? "active" : ""}`}
-                        key={chat._id}
-                        onClick={() => handleSelectChat(chat)}
-                      >
-                        <img src={recipient?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} alt="Recipient" />
-                        <div className="channel-summary">
-                          <h4>{recipient?.name || "Customer"}</h4>
-                          <span className="last-msg-preview">{chat.lastMessage?.content || "Click to open conversation..."}</span>
+                  chats
+                    .filter((chat) => {
+                      if (chatSubTab === "chats") {
+                        return chat.status === "accepted";
+                      } else {
+                        return chat.status !== "accepted";
+                      }
+                    })
+                    .filter((chat) => {
+                      if (!chatSearchQuery.trim()) return true;
+                      const recipient = chat.participants?.find(p => p._id !== (user?._id || user?.id));
+                      const query = chatSearchQuery.toLowerCase();
+                      return (
+                        recipient?.name?.toLowerCase().includes(query) ||
+                        chat.listing?.title?.toLowerCase().includes(query)
+                      );
+                    })
+                    .map((chat) => {
+                      const recipient = chat.participants?.find(p => p._id !== (user?.id || user?._id));
+                      const isActive = activeChat?._id === chat._id;
+                      const unreadCount = (user?.id || user?._id) === chat.buyer ? chat.unreadCountBuyer : chat.unreadCountSeller;
+                      
+                      return (
+                        <div 
+                          className={`channel-row-item ${isActive ? "active" : ""}`}
+                          key={chat._id}
+                          onClick={() => handleSelectChat(chat)}
+                          style={{ position: "relative" }}
+                        >
+                          <img src={recipient?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} alt="Recipient" />
+                          <div className="channel-summary">
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                              <h4>{recipient?.name || "Customer"}</h4>
+                              <span style={{ fontSize: "10px", color: "var(--color-text-tertiary)" }}>
+                                {chat.listing?.price ? `₹${chat.listing.price}` : ""}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: "11px", fontWeight: "600", color: "var(--color-brand)", marginBottom: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {chat.listing?.title}
+                            </div>
+                            <span className="last-msg-preview">
+                              {chat.lastMessage?.messageType === "system" ? (
+                                <em>{chat.lastMessage?.content || chat.lastMessage?.message}</em>
+                              ) : (
+                                chat.lastMessage?.content || chat.lastMessage?.message || "Click to open inquiry..."
+                              )}
+                            </span>
+                          </div>
+                          {unreadCount > 0 && (
+                            <span className="badge badge-danger" style={{ position: "absolute", right: "12px", bottom: "14px", minWidth: "18px", height: "18px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", padding: "2px" }}>
+                              {unreadCount}
+                            </span>
+                          )}
+                          {chat.status === "pending" && (
+                            <span className="badge badge-warning" style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "4px", alignSelf: "flex-start", marginTop: "4px" }}>
+                              Request
+                            </span>
+                          )}
+                          {chat.status === "rejected" && (
+                            <span className="badge badge-danger" style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "4px", alignSelf: "flex-start", marginTop: "4px" }}>
+                              Declined
+                            </span>
+                          )}
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    })
                 ) : (
                   <div className="channels-empty-box">
-                    <p>No active seller inquiries yet.</p>
+                    <p>No conversation threads found.</p>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Right: Message Window */}
-            <div className="chat-messages-window">
+            <div className="chat-messages-window" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
               {activeChat ? (
                 <>
-                  <div className="chat-window-header">
-                    <div className="recipient-info">
-                      <img src={activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} alt="avatar" />
-                      <div>
-                        <h4>{activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.name}</h4>
-                        <p>{activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.collegeName || "SVNIT Customer"}</p>
+                  <div className="chat-window-header" style={{ padding: "8px 16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div className="recipient-info">
+                        <img src={activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} alt="avatar" />
+                        <div>
+                          <h4>{activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.name}</h4>
+                          <p>{activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.collegeName || "SVNIT Customer"}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Listing Card inside Chat Header */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "var(--color-bg-surface-2)", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--color-border-subtle)" }}>
+                      <img 
+                        src={activeChat.listing?.images?.[0] || "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=100"} 
+                        alt="Listing Cover" 
+                        style={{ width: "40px", height: "50px", objectFit: "cover", borderRadius: "4px" }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <h5 style={{ margin: "0 0 2px 0", fontSize: "13px", fontWeight: "700" }}>{activeChat.listing?.title}</h5>
+                        <p style={{ margin: "0", fontSize: "12px", color: "var(--color-text-secondary)" }}>
+                          Original Listing Price: <strong>₹{activeChat.listing?.price}</strong>
+                        </p>
+                      </div>
+                      <div style={{ display: "flex", gap: "6px" }}>
+                        {activeChat.listing?.status === "sold" ? (
+                          <span className="badge badge-success" style={{ fontSize: "10px", padding: "4px 8px" }}>Marked Sold / Closed</span>
+                        ) : (
+                          <>
+                            {activeChat.status === "accepted" && (
+                              <>
+                                <button 
+                                  className="btn btn-outline btn-xs" 
+                                  onClick={handleOpenCouponCreator}
+                                >
+                                  <i className="ri-coupon-2-line"></i> Offer Coupon
+                                </button>
+                                <button 
+                                  className="btn btn-brand btn-xs" 
+                                  onClick={async () => {
+                                    if(window.confirm("Mark book as sold manually? This increments your metric count.")) {
+                                      try {
+                                        const res = await markListingAsSoldApi(activeChat.listing._id);
+                                        if (res.success) {
+                                          showToast("Listing marked as sold successfully!", "success");
+                                          setActiveChat(prev => ({
+                                            ...prev,
+                                            listing: { ...prev.listing, status: "sold" }
+                                          }));
+                                        }
+                                      } catch (err) {
+                                        setError("Action failed.");
+                                      }
+                                    }
+                                  }}
+                                >
+                                  Mark Sold
+                                </button>
+                              </>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  <div className="chat-messages-history-pane">
+                  <div className="chat-messages-history-pane" style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
                     {chatMessages.length > 0 ? (
                       chatMessages.map((msg) => {
                         const isMe = msg.sender === (user?.id || user?._id);
+                        if (msg.messageType === "system") {
+                          return (
+                            <div key={msg._id} style={{ display: "flex", justifyContent: "center", margin: "12px 0" }}>
+                              <div style={{ backgroundColor: "var(--color-bg-surface-2)", color: "var(--color-text-secondary)", fontSize: "11px", fontWeight: "600", padding: "6px 16px", borderRadius: "16px", border: "1px solid var(--color-border-subtle)" }}>
+                                <i className="ri-information-line" style={{ marginRight: "4px" }}></i>
+                                {msg.content || msg.message}
+                              </div>
+                            </div>
+                          );
+                        }
                         return (
                           <div className={`message-bubble-row ${isMe ? "sender-me" : "sender-them"}`} key={msg._id}>
                             <div className="bubble-content-card">
-                              <p>{msg.content}</p>
-                              <span className="timestamp">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              <p>{msg.content || msg.message}</p>
+                              <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "4px" }}>
+                                <span className="timestamp">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                {isMe && (
+                                  <i className="ri-check-double-line" style={{ fontSize: "10px", color: msg.isRead ? "var(--color-brand)" : "rgba(255,255,255,0.6)" }}></i>
+                                )}
+                              </div>
                             </div>
                           </div>
                         );
@@ -1288,19 +1706,52 @@ export const SellerDashboard = ({ activeTab }) => {
                         <p>Say hello to reply to this customer query!</p>
                       </div>
                     )}
+                    {otherPartyTyping && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "var(--color-text-tertiary)", marginTop: "4px" }}>
+                        <span className="loading-spinner-xs" style={{ width: "10px", height: "10px" }}></span>
+                        <span>Buyer typing...</span>
+                      </div>
+                    )}
                   </div>
 
-                  <form className="chat-input-row-bar" onSubmit={handleSendMessage}>
-                    <input 
-                      type="text" 
-                      placeholder="Type a response..."
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                    />
-                    <button type="submit" className="btn btn-brand" disabled={!chatInput.trim()}>
-                      <i className="ri-send-plane-fill"></i>
-                    </button>
-                  </form>
+                  {/* State-based Footer / Controls */}
+                  {activeChat.status === "pending" ? (
+                    <div style={{ backgroundColor: "var(--color-bg-surface-2)", borderTop: "1px solid var(--color-border-default)", padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: "600" }}>
+                        <i className="ri-question-line" style={{ color: "var(--color-brand)", fontSize: "18px" }}></i>
+                        <span>Accept chat request to coordinate deal with this buyer?</span>
+                      </div>
+                      <div style={{ display: "flex", gap: "12px" }}>
+                        <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => handleRejectChat(activeChat._id)}>Decline</button>
+                        <button className="btn btn-brand" style={{ flex: 1 }} onClick={() => handleAcceptChat(activeChat._id)}>Accept Chat Request</button>
+                      </div>
+                    </div>
+                  ) : activeChat.status === "rejected" ? (
+                    <div style={{ backgroundColor: "#FCE8E6", padding: "12px", borderTop: "1px solid var(--color-border-default)", textAlign: "center" }}>
+                      <span style={{ fontSize: "12px", color: "#C5221F", fontWeight: "600" }}>
+                        You declined this request. Conversation locked forever.
+                      </span>
+                    </div>
+                  ) : activeChat.status === "closed" ? (
+                    <div style={{ backgroundColor: "var(--color-bg-surface-2)", padding: "12px", borderTop: "1px solid var(--color-border-default)", textAlign: "center" }}>
+                      <span style={{ fontSize: "12px", color: "var(--color-text-secondary)", fontWeight: "600" }}>
+                        This conversation has been closed.
+                      </span>
+                    </div>
+                  ) : (
+                    <form className="chat-input-row-bar" onSubmit={handleSendMessage}>
+                      <input 
+                        type="text" 
+                        placeholder="Type a response..."
+                        value={chatInput}
+                        onChange={handleChatInputChange}
+                        maxLength={1000}
+                      />
+                      <button type="submit" className="btn btn-brand" disabled={!chatInput.trim()}>
+                        <i className="ri-send-plane-fill"></i>
+                      </button>
+                    </form>
+                  )}
                 </>
               ) : (
                 <div className="chat-welcome-pane">
@@ -1346,6 +1797,40 @@ export const SellerDashboard = ({ activeTab }) => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* --- SELLER COUPON CREATION MODAL --- */}
+      {showCouponModal && activeChat && (
+        <div className="modal-backdrop-overlay" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+          <form className="modal-card-container animate-slide-up" onSubmit={handleGenerateCouponCode} style={{ backgroundColor: "var(--color-bg-page)", padding: "24px", borderRadius: "12px", width: "380px", maxWidth: "90%", boxShadow: "0 10px 25px rgba(0,0,0,0.15)" }}>
+            <h3 style={{ margin: "0 0 12px 0", fontSize: "16px", fontWeight: "700" }}>Offer Discount Coupon</h3>
+            <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", margin: "0 0 16px 0" }}>
+              Generate a custom discount coupon code for this buyer. The coupon applies only to your listing <strong>"{activeChat.listing?.title}"</strong>.
+            </p>
+            <div className="form-group-field" style={{ marginBottom: "20px" }}>
+              <label style={{ fontSize: "11px", fontWeight: "600", marginBottom: "6px", display: "block" }}>Discount Amount (₹) *</label>
+              <input 
+                type="number"
+                className="form-control"
+                required
+                min="1"
+                max={activeChat.listing?.price || 1000}
+                placeholder="e.g. 50"
+                value={couponDiscountAmount}
+                onChange={(e) => setCouponDiscountAmount(e.target.value)}
+              />
+              <span style={{ fontSize: "10px", color: "var(--color-text-tertiary)", marginTop: "4px", display: "block" }}>
+                This amount will be subtracted from the listing price of ₹{activeChat.listing?.price}.
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowCouponModal(false)}>Cancel</button>
+              <button type="submit" className="btn btn-brand btn-sm" disabled={couponLoading}>
+                {couponLoading ? "Generating..." : "Generate Coupon"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

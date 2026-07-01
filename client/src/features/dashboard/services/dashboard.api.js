@@ -70,8 +70,8 @@ export const getConversationsApi = async () => {
   return response.data;
 };
 
-export const createConversationApi = async (listingId) => {
-  const response = await api.post("/conversations", { listingId });
+export const createConversationApi = async (listingId, message) => {
+  const response = await api.post("/conversations", { listingId, message });
   return response.data;
 };
 
@@ -82,6 +82,32 @@ export const getConversationMessagesApi = async (conversationId) => {
 
 export const sendMessageApi = async (conversationId, content) => {
   const response = await api.post("/conversations/message", { conversationId, content });
+  return response.data;
+};
+
+export const acceptConversationApi = async (conversationId) => {
+  const response = await api.patch(`/conversations/${conversationId}/accept`);
+  return response.data;
+};
+
+export const rejectConversationApi = async (conversationId) => {
+  const response = await api.patch(`/conversations/${conversationId}/reject`);
+  return response.data;
+};
+
+export const generateCouponApi = async (conversationId, discountAmount) => {
+  const response = await api.post(`/conversations/${conversationId}/coupon`, { discountAmount });
+  return response.data;
+};
+
+// 4.5 Payment & Coupon Application API
+export const createPaymentOrderApi = async (listingId, couponCode) => {
+  const response = await api.post("/payment/create", { listingId, couponCode });
+  return response.data;
+};
+
+export const verifyPaymentApi = async (paymentData) => {
+  const response = await api.post("/payment/verify", paymentData);
   return response.data;
 };
 

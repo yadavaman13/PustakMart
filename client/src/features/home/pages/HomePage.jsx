@@ -545,9 +545,10 @@ export default function HomePage() {
               Your official student-to-student textbook trading platform. Empowering local commerce, peer support, and academic resource circularity across colleges.
             </p>
             <div className="social-links">
-              <a href="#github"><i className="ri-github-fill"></i></a>
-              <a href="#twitter"><i className="ri-twitter-fill"></i></a>
-              <a href="#linkedin"><i className="ri-linkedin-box-fill"></i></a>
+              <a href="https://www.instagram.com/pustak_mart?igsh=MWcwbHJ6MXpoeHBoeQ==" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i className="ri-instagram-fill"></i></a>
+              <a href="#github" aria-label="GitHub"><i className="ri-github-fill"></i></a>
+              <a href="#twitter" aria-label="Twitter"><i className="ri-twitter-x-line"></i></a>
+              <a href="#linkedin" aria-label="LinkedIn"><i className="ri-linkedin-box-fill"></i></a>
             </div>
           </div>
 

@@ -16,8 +16,15 @@ import {
   getNotificationsApi, 
   markNotificationReadApi,
   applySellerApi,
-  getImageKitAuthParamsApi
+  getImageKitAuthParamsApi,
+  acceptConversationApi,
+  rejectConversationApi,
+  generateCouponApi,
+  createPaymentOrderApi,
+  verifyPaymentApi,
+  createReviewApi
 } from "../services/dashboard.api.js";
+import { useSocket } from "../../shared/context/SocketContext.jsx";
 import axios from "axios";
 import ProfileSettingsView from "../components/ProfileSettingsView.jsx";
 
@@ -53,9 +60,34 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
   const [requestsLimit, setRequestsLimit] = useState(5);
 
   // Chat/Messages State
+  const socket = useSocket();
   const [activeChat, setActiveChat] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
+  const [chatSubTab, setChatSubTab] = useState("chats"); // "chats" (accepted) or "requests" (pending)
+  const [chatSearchQuery, setChatSearchQuery] = useState("");
+  const [otherPartyTyping, setOtherPartyTyping] = useState(false);
+  
+  // Introductory Message Modal State
+  const [showIntroModal, setShowIntroModal] = useState(false);
+  const [introBook, setIntroBook] = useState(null);
+  const [introMessage, setIntroMessage] = useState("");
+
+  // Coupon Checkout Modal State
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [couponCodeInput, setCouponCodeInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [tempPaymentOrder, setTempPaymentOrder] = useState(null);
+
+  // Review Modal State
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewedListing, setReviewedListing] = useState(null);
+  const [reviewedSeller, setReviewedSeller] = useState(null);
 
   // Profile status application states
   const [idCardFile, setIdCardFile] = useState(null);
@@ -288,33 +320,174 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
     }
   };
 
+  // Socket.io Real-Time Event Listener binding
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleMessageReceived = (data) => {
+      console.log("Socket message received:", data);
+      if (activeChat && activeChat._id === data.conversationId) {
+        setChatMessages(prev => {
+          // Avoid duplicate UI rendering (e.g. from optimistic send)
+          if (prev.some(m => m._id === data.message._id)) return prev;
+          return [...prev, {
+            ...data.message,
+            content: data.message.message
+          }];
+        });
+        
+        // Auto emit message_read event to clear badges
+        socket.emit("message_read", {
+          conversationId: activeChat._id,
+          recipientId: activeChat.buyer === (user?.id || user?._id) ? activeChat.seller : activeChat.buyer
+        });
+      }
+
+      // Update conversations sidebar values in real-time
+      setChats(prev => prev.map(c => {
+        if (c._id === data.conversationId) {
+          const isSenderMe = data.message.sender === (user?.id || user?._id);
+          const isCurrentActive = activeChat && activeChat._id === data.conversationId;
+          return {
+            ...c,
+            lastMessage: {
+              _id: data.message._id,
+              content: data.message.message,
+              sender: data.message.sender,
+              createdAt: data.message.createdAt
+            },
+            lastMessageAt: data.message.createdAt,
+            unreadCountBuyer: (!isSenderMe && !isCurrentActive && c.buyer === (user?.id || user?._id)) ? (c.unreadCountBuyer || 0) + 1 : c.unreadCountBuyer,
+            unreadCountSeller: (!isSenderMe && !isCurrentActive && c.seller === (user?.id || user?._id)) ? (c.unreadCountSeller || 0) + 1 : c.unreadCountSeller,
+          };
+        }
+        return c;
+      }));
+    };
+
+    const handleConversationAccepted = (data) => {
+      console.log("Socket conversation accepted:", data);
+      if (activeChat && activeChat._id === data.conversationId) {
+        setActiveChat(prev => ({ ...prev, status: "accepted" }));
+        if (data.systemMessage) {
+          setChatMessages(prev => [...prev, {
+            ...data.systemMessage,
+            content: data.systemMessage.message
+          }]);
+        }
+      }
+      setChats(prev => prev.map(c => c._id === data.conversationId ? { ...c, status: "accepted" } : c));
+    };
+
+    const handleConversationRejected = (data) => {
+      console.log("Socket conversation rejected:", data);
+      if (activeChat && activeChat._id === data.conversationId) {
+        setActiveChat(prev => ({ ...prev, status: "rejected" }));
+        if (data.systemMessage) {
+          setChatMessages(prev => [...prev, {
+            ...data.systemMessage,
+            content: data.systemMessage.message
+          }]);
+        }
+      }
+      setChats(prev => prev.map(c => c._id === data.conversationId ? { ...c, status: "rejected" } : c));
+    };
+
+    const handleTypingStart = (data) => {
+      if (activeChat && activeChat._id === data.conversationId) {
+        setOtherPartyTyping(true);
+      }
+    };
+
+    const handleTypingStop = (data) => {
+      if (activeChat && activeChat._id === data.conversationId) {
+        setOtherPartyTyping(false);
+      }
+    };
+
+    const handleMessageRead = (data) => {
+      if (activeChat && activeChat._id === data.conversationId) {
+        setChatMessages(prev => prev.map(m => m.sender === (user?.id || user?._id) ? { ...m, isRead: true } : m));
+      }
+    };
+
+    socket.on("message_received", handleMessageReceived);
+    socket.on("conversation_accepted", handleConversationAccepted);
+    socket.on("conversation_rejected", handleConversationRejected);
+    socket.on("typing_start", handleTypingStart);
+    socket.on("typing_stop", handleTypingStop);
+    socket.on("message_read", handleMessageRead);
+
+    return () => {
+      socket.off("message_received", handleMessageReceived);
+      socket.off("conversation_accepted", handleConversationAccepted);
+      socket.off("conversation_rejected", handleConversationRejected);
+      socket.off("typing_start", handleTypingStart);
+      socket.off("typing_stop", handleTypingStop);
+      socket.off("message_read", handleMessageRead);
+    };
+  }, [socket, activeChat, user]);
+
   // Direct chat selection
   const handleSelectChat = async (chat) => {
     setActiveChat(chat);
+    setOtherPartyTyping(false);
     try {
       const res = await getConversationMessagesApi(chat._id);
       if (res.success) {
-        setChatMessages(res.data?.messages || []);
+        const messages = res.data?.messages || [];
+        const mappedMessages = messages.map(m => ({
+          ...m,
+          content: m.message
+        }));
+        setChatMessages(mappedMessages);
+
+        // Emit message_read receipt
+        if (socket) {
+          const otherUserId = chat.buyer === (user?.id || user?._id) ? chat.seller : chat.buyer;
+          socket.emit("message_read", {
+            conversationId: chat._id,
+            recipientId: otherUserId
+          });
+        }
+
+        // Update local chats indicators list
+        setChats(prev => prev.map(c => c._id === chat._id ? { ...c, unreadCountBuyer: 0, unreadCountSeller: 0 } : c));
       }
     } catch (err) {
       setError("Failed to fetch messages");
     }
   };
 
-  // Start chat conversation from Browse Books list
-  const handleStartChatFromBook = async (book) => {
+  // Start chat conversation from Browse Books list (triggers introduction modal)
+  const handleStartChatFromBook = (book) => {
+    const bookSellerId = book.seller?._id || book.seller;
+    if (bookSellerId === (user?.id || user?._id)) {
+      setError("You already own this listing. Try managing it from your seller dashboard.");
+      setTimeout(clearAlerts, 4000);
+      return;
+    }
+    setIntroBook(book);
+    setIntroMessage(`Hi, is this "${book.title}" book still available?`);
+    setShowIntroModal(true);
+  };
+
+  const handleConfirmStartChat = async () => {
+    if (!introBook) return;
     try {
       setLoading(true);
-      const res = await createConversationApi(book._id);
+      setShowIntroModal(false);
+      const res = await createConversationApi(introBook._id, introMessage);
       if (res.success) {
-        setActiveTab("messages");
-        // Select chat
+        setSearchParams({ mode: "user", tab: "messages" });
+        setChatSubTab("requests"); // Switch sidebar to Requests tab (where pending requests are)
         const targetChat = res.data?.conversation || res.data;
+        await fetchChatConversations();
         handleSelectChat(targetChat);
       }
     } catch (err) {
       setError("Failed to initialize conversation: " + (err.response?.data?.message || err.message));
-      setTimeout(clearAlerts, 3000);
+      setTimeout(clearAlerts, 4000);
     } finally {
       setLoading(false);
     }
@@ -328,40 +501,188 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
     const content = chatInput;
     setChatInput(""); // Clear field immediately for responsive look
     
+    // Stop typing socket notification
+    if (socket) {
+      const otherUserId = activeChat.buyer === (user?.id || user?._id) ? activeChat.seller : activeChat.buyer;
+      socket.emit("typing_stop", {
+        conversationId: activeChat._id,
+        recipientId: otherUserId
+      });
+    }
+
     try {
-      const res = await sendMessageApi(activeChat._id, content);
-      if (res.success) {
-        setChatMessages(prev => [...prev, res.data?.message]);
-        // Update chat list last message preview
-        setChats(prev => prev.map(c => c._id === activeChat._id ? { ...c, lastMessage: res.data?.message } : c));
+      if (socket && socket.connected) {
+        socket.emit("send_message", {
+          conversationId: activeChat._id,
+          message: content
+        });
+        
+        // Optimistic update
+        const tempMsgId = "temp_" + Date.now();
+        setChatMessages(prev => [...prev, {
+          _id: tempMsgId,
+          sender: user?.id || user?._id,
+          content,
+          message: content,
+          messageType: "text",
+          createdAt: new Date().toISOString()
+        }]);
+      } else {
+        // Fallback HTTP
+        const res = await sendMessageApi(activeChat._id, content);
+        if (res.success) {
+          setChatMessages(prev => [...prev, {
+            ...res.data?.message,
+            content: res.data?.message?.message
+          }]);
+          setChats(prev => prev.map(c => c._id === activeChat._id ? { ...c, lastMessage: res.data?.message } : c));
+        }
       }
     } catch (err) {
       setError("Message sending failed");
     }
   };
 
-  // Live Chat Polling (10s interval when chat is active)
-  useEffect(() => {
-    if (!activeChat || activeTab !== "messages") return;
-    
-    const pollMessages = async () => {
-      try {
-        const res = await getConversationMessagesApi(activeChat._id);
-        if (res.success) {
-          const msgs = res.data?.messages || [];
-          // Only update if messages length is different to avoid layout shifting
-          if (msgs.length !== chatMessages.length) {
-            setChatMessages(msgs);
-          }
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
+  // Typing event handler
+  const handleChatInputChange = (e) => {
+    setChatInput(e.target.value);
+    if (!socket || !activeChat) return;
 
-    const interval = setInterval(pollMessages, 10000);
-    return () => clearInterval(interval);
-  }, [activeChat, chatMessages.length, activeTab]);
+    const otherUserId = activeChat.buyer === (user?.id || user?._id) ? activeChat.seller : activeChat.buyer;
+    if (!otherUserId) return;
+
+    socket.emit("typing_start", {
+      conversationId: activeChat._id,
+      recipientId: otherUserId
+    });
+
+    if (window.typingTimeout) clearTimeout(window.typingTimeout);
+    window.typingTimeout = setTimeout(() => {
+      socket.emit("typing_stop", {
+        conversationId: activeChat._id,
+        recipientId: otherUserId
+      });
+    }, 1500);
+  };
+
+  // --- Purchase / Checkout handlers ---
+  const handleOpenCheckout = async () => {
+    if (!activeChat || !activeChat.listing) return;
+    setCheckoutLoading(true);
+    setAppliedCoupon(null);
+    setCouponDiscount(0);
+    setCouponCodeInput("");
+    try {
+      // Pre-initialize checkout order without coupon first
+      const res = await createPaymentOrderApi(activeChat.listing._id);
+      if (res.success) {
+        setTempPaymentOrder(res.data.order);
+        setShowCheckoutModal(true);
+      }
+    } catch (err) {
+      setError("Checkout failed to initialize: " + (err.response?.data?.message || err.message));
+      setTimeout(clearAlerts, 4000);
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCodeInput.trim() || !activeChat?.listing) return;
+    setCheckoutLoading(true);
+    try {
+      const res = await createPaymentOrderApi(activeChat.listing._id, couponCodeInput.toUpperCase());
+      if (res.success) {
+        setTempPaymentOrder(res.data.order);
+        setAppliedCoupon(couponCodeInput.toUpperCase());
+        // Calculate discount amount from differences
+        const originalPrice = activeChat.listing.price;
+        const finalPrice = res.data.order.amount / 100;
+        setCouponDiscount(Math.max(0, originalPrice - finalPrice));
+        showToast("Coupon applied successfully!", "success");
+      }
+    } catch (err) {
+      setError("Invalid or unauthorized coupon code");
+      setTimeout(clearAlerts, 3000);
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  const handleConfirmMockPurchase = async () => {
+    if (!tempPaymentOrder || !activeChat?.listing) return;
+    setCheckoutLoading(true);
+    try {
+      // Simulate Razorpay signature verification
+      const verifyData = {
+        razorpayOrderId: tempPaymentOrder.id,
+        razorpayPaymentId: "pay_mock_" + Date.now() + "_" + Math.floor(Math.random() * 100),
+        signature: "mock-verified-signature"
+      };
+
+      const res = await verifyPaymentApi(verifyData);
+      if (res.success) {
+        setShowCheckoutModal(false);
+        showToast("Book purchased successfully!", "success");
+        
+        // Setup review triggers
+        setReviewedListing(activeChat.listing);
+        const sellerProfile = activeChat.participants?.find(p => p._id !== (user?.id || user?._id));
+        setReviewedSeller(sellerProfile);
+        
+        // Refresh Listing and Chat details
+        await fetchChatConversations();
+        if (activeChat) {
+          const detailRes = await getConversationMessagesApi(activeChat._id);
+          if (detailRes.success) {
+            setChatMessages(detailRes.data?.messages?.map(m => ({ ...m, content: m.message })) || []);
+          }
+          // Update local status
+          setActiveChat(prev => ({
+            ...prev,
+            listing: { ...prev.listing, status: "sold" }
+          }));
+        }
+
+        // Show review popup prompt (Auto Review Request)
+        setTimeout(() => {
+          setShowReviewModal(true);
+        }, 1500);
+      }
+    } catch (err) {
+      setError("Payment verification failed: " + (err.response?.data?.message || err.message));
+      setTimeout(clearAlerts, 4000);
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  // --- Feedback / Review Submit Handler ---
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    if (!reviewedSeller || !reviewedListing) return;
+    setReviewLoading(true);
+    try {
+      const reviewPayload = {
+        sellerId: reviewedSeller._id || reviewedSeller.id,
+        rating: reviewRating,
+        review: reviewText,
+        listingId: reviewedListing._id || reviewedListing.id
+      };
+      const res = await createReviewApi(reviewPayload);
+      if (res.success) {
+        showToast("Review submitted successfully! Thank you.", "success");
+        setShowReviewModal(false);
+        setReviewText("");
+        setReviewRating(5);
+      }
+    } catch (err) {
+      setError("Review submission failed: " + (err.response?.data?.message || err.message));
+      setTimeout(clearAlerts, 4000);
+    } finally {
+      setReviewLoading(false);
+    }
+  };
 
   // --- Seller Application Upload ---
   const handleUploadAndSubmitSeller = async (e) => {
@@ -926,65 +1247,198 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
           <div className="chat-layout-split-box">
             {/* Left: Chat Channels List */}
             <div className="channels-sidebar-list">
-              <h3>Active Channels</h3>
+              <div style={{ padding: "12px", borderBottom: "1px solid var(--color-border-default)" }}>
+                <input 
+                  type="text" 
+                  placeholder="Search chats or books..." 
+                  className="form-control"
+                  style={{ width: "100%", padding: "6px 12px", fontSize: "12px", borderRadius: "16px", border: "1px solid var(--color-border-medium)" }}
+                  value={chatSearchQuery}
+                  onChange={(e) => setChatSearchQuery(e.target.value)}
+                />
+              </div>
+              <div style={{ display: "flex", borderBottom: "1px solid var(--color-border-default)" }}>
+                <button 
+                  className={`btn-subtab ${chatSubTab === "chats" ? "active" : ""}`}
+                  style={{ flex: 1, padding: "8px", border: "none", background: "none", fontSize: "12px", fontWeight: "600", borderBottom: chatSubTab === "chats" ? "2px solid var(--color-brand)" : "none", color: chatSubTab === "chats" ? "var(--color-brand)" : "var(--color-text-secondary)" }}
+                  onClick={() => setChatSubTab("chats")}
+                >
+                  Chats (Accepted)
+                </button>
+                <button 
+                  className={`btn-subtab ${chatSubTab === "requests" ? "active" : ""}`}
+                  style={{ flex: 1, padding: "8px", border: "none", background: "none", fontSize: "12px", fontWeight: "600", borderBottom: chatSubTab === "requests" ? "2px solid var(--color-brand)" : "none", color: chatSubTab === "requests" ? "var(--color-brand)" : "var(--color-text-secondary)" }}
+                  onClick={() => setChatSubTab("requests")}
+                >
+                  Requests
+                </button>
+              </div>
+
               <div className="channels-scroll-container">
                 {chats.length > 0 ? (
-                  chats.map((chat) => {
-                    const recipient = chat.participants?.find(p => p._id !== (user?._id || user?.id));
-                    const isActive = activeChat?._id === chat._id;
-                    return (
-                      <div 
-                        className={`channel-row-item ${isActive ? "active" : ""}`}
-                        key={chat._id}
-                        onClick={() => handleSelectChat(chat)}
-                      >
-                        <img 
-                          src={recipient?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} 
-                          alt="Recipient" 
-                        />
-                        <div className="channel-summary">
-                          <h4>{recipient?.name || "Student Seller"}</h4>
-                          <span className="last-msg-preview">
-                            {chat.lastMessage?.content || "Click to open conversation..."}
-                          </span>
+                  chats
+                    .filter((chat) => {
+                      // Filter by status tab
+                      if (chatSubTab === "chats") {
+                        return chat.status === "accepted";
+                      } else {
+                        // pending/rejected/closed go to requests
+                        return chat.status !== "accepted";
+                      }
+                    })
+                    .filter((chat) => {
+                      // Filter by search query
+                      if (!chatSearchQuery.trim()) return true;
+                      const recipient = chat.participants?.find(p => p._id !== (user?._id || user?.id));
+                      const query = chatSearchQuery.toLowerCase();
+                      return (
+                        recipient?.name?.toLowerCase().includes(query) ||
+                        chat.listing?.title?.toLowerCase().includes(query)
+                      );
+                    })
+                    .map((chat) => {
+                      const recipient = chat.participants?.find(p => p._id !== (user?._id || user?.id));
+                      const isActive = activeChat?._id === chat._id;
+                      const unreadCount = (user?.id || user?._id) === chat.buyer ? chat.unreadCountBuyer : chat.unreadCountSeller;
+                      
+                      return (
+                        <div 
+                          className={`channel-row-item ${isActive ? "active" : ""}`}
+                          key={chat._id}
+                          onClick={() => handleSelectChat(chat)}
+                          style={{ position: "relative" }}
+                        >
+                          <img 
+                            src={recipient?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} 
+                            alt="Recipient" 
+                          />
+                          <div className="channel-summary">
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                              <h4>{recipient?.name || "Student"}</h4>
+                              <span style={{ fontSize: "10px", color: "var(--color-text-tertiary)" }}>
+                                {chat.listing?.price ? `₹${chat.listing.price}` : ""}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: "11px", fontWeight: "600", color: "var(--color-brand)", marginBottom: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {chat.listing?.title}
+                            </div>
+                            <span className="last-msg-preview">
+                              {chat.lastMessage?.messageType === "system" ? (
+                                <em>{chat.lastMessage?.content || chat.lastMessage?.message}</em>
+                              ) : (
+                                chat.lastMessage?.content || chat.lastMessage?.message || "Open chat request..."
+                              )}
+                            </span>
+                          </div>
+                          {unreadCount > 0 && (
+                            <span className="badge badge-danger" style={{ position: "absolute", right: "12px", bottom: "14px", minWidth: "18px", height: "18px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", padding: "2px" }}>
+                              {unreadCount}
+                            </span>
+                          )}
+                          {chat.status === "pending" && (
+                            <span className="badge badge-warning" style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "4px", alignSelf: "flex-start", marginTop: "4px" }}>
+                              Pending
+                            </span>
+                          )}
+                          {chat.status === "rejected" && (
+                            <span className="badge badge-danger" style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "4px", alignSelf: "flex-start", marginTop: "4px" }}>
+                              Declined
+                            </span>
+                          )}
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    })
                 ) : (
                   <div className="channels-empty-box">
-                    <p>No active conversations yet.</p>
+                    <p>No conversations found.</p>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Right: Message Window */}
-            <div className="chat-messages-window">
+            <div className="chat-messages-window" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
               {activeChat ? (
                 <>
-                  <div className="chat-window-header">
-                    <div className="recipient-info">
+                  <div className="chat-window-header" style={{ padding: "8px 16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div className="recipient-info">
+                        <img 
+                          src={activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} 
+                          alt="User avatar" 
+                        />
+                        <div>
+                          <h4 style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                            {activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.name}
+                            {activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.isVerified && (
+                              <i className="ri-checkbox-circle-fill" style={{ color: "var(--color-brand)", fontSize: "14px" }} title="Verified Student"></i>
+                            )}
+                          </h4>
+                          <p>{activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.collegeName || "SVNIT Student"}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Listing Card inside Chat Header */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "var(--color-bg-surface-2)", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--color-border-subtle)" }}>
                       <img 
-                        src={activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} 
-                        alt="User avatar" 
+                        src={activeChat.listing?.images?.[0] || "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=100"} 
+                        alt="Listing Cover" 
+                        style={{ width: "40px", height: "50px", objectFit: "cover", borderRadius: "4px" }}
                       />
-                      <div>
-                        <h4>{activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.name}</h4>
-                        <p>{activeChat.participants?.find(p => p._id !== (user?.id || user?._id))?.collegeName || "SVNIT Student"}</p>
+                      <div style={{ flex: 1 }}>
+                        <h5 style={{ margin: "0 0 2px 0", fontSize: "13px", fontWeight: "700" }}>{activeChat.listing?.title}</h5>
+                        <p style={{ margin: "0", fontSize: "12px", color: "var(--color-text-secondary)" }}>
+                          Condition: <strong style={{ textTransform: "capitalize" }}>{activeChat.listing?.condition?.replace("_", " ")}</strong>
+                        </p>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+                        <span style={{ fontSize: "14px", fontWeight: "700", color: "var(--color-text-primary)" }}>₹{activeChat.listing?.price}</span>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          {activeChat.listing?.status === "sold" ? (
+                            <span className="badge badge-success" style={{ fontSize: "10px", padding: "4px 8px" }}>Sold / Purchased</span>
+                          ) : (
+                            <>
+                              {(user?.id || user?._id) === activeChat.buyer && activeChat.status === "accepted" && (
+                                <button 
+                                  className="btn btn-brand btn-xs" 
+                                  onClick={handleOpenCheckout}
+                                  disabled={checkoutLoading}
+                                >
+                                  Buy Now
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="chat-messages-history-pane">
+                  <div className="chat-messages-history-pane" style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
                     {chatMessages.length > 0 ? (
                       chatMessages.map((msg) => {
                         const isMe = msg.sender === (user?.id || user?._id);
+                        if (msg.messageType === "system") {
+                          return (
+                            <div key={msg._id} style={{ display: "flex", justifyContent: "center", margin: "12px 0" }}>
+                              <div style={{ backgroundColor: "var(--color-bg-surface-2)", color: "var(--color-text-secondary)", fontSize: "11px", fontWeight: "600", padding: "6px 16px", borderRadius: "16px", border: "1px solid var(--color-border-subtle)" }}>
+                                <i className="ri-information-line" style={{ marginRight: "4px" }}></i>
+                                {msg.content || msg.message}
+                              </div>
+                            </div>
+                          );
+                        }
                         return (
                           <div className={`message-bubble-row ${isMe ? "sender-me" : "sender-them"}`} key={msg._id}>
                             <div className="bubble-content-card">
-                              <p>{msg.content}</p>
-                              <span className="timestamp">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              <p>{msg.content || msg.message}</p>
+                              <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "4px" }}>
+                                <span className="timestamp">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                {isMe && (
+                                  <i className="ri-check-double-line" style={{ fontSize: "10px", color: msg.isRead ? "var(--color-brand)" : "rgba(255,255,255,0.6)" }}></i>
+                                )}
+                              </div>
                             </div>
                           </div>
                         );
@@ -992,22 +1446,52 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
                     ) : (
                       <div className="messages-empty-state">
                         <i className="ri-question-answer-line"></i>
-                        <p>No messages here. Say hello to initiate the deal!</p>
+                        <p>No messages yet. Say hello to initiate details.</p>
+                      </div>
+                    )}
+                    {otherPartyTyping && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "var(--color-text-tertiary)", marginTop: "4px" }}>
+                        <span className="loading-spinner-xs" style={{ width: "10px", height: "10px" }}></span>
+                        <span>Typing...</span>
                       </div>
                     )}
                   </div>
 
-                  <form className="chat-input-row-bar" onSubmit={handleSendMessage}>
-                    <input 
-                      type="text" 
-                      placeholder="Type a message..."
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                    />
-                    <button type="submit" className="btn btn-brand" disabled={!chatInput.trim()}>
-                      <i className="ri-send-plane-fill"></i>
-                    </button>
-                  </form>
+                  {/* State-based Chat Input Bar */}
+                  {activeChat.status === "pending" ? (
+                    <div style={{ backgroundColor: "#FEF7E0", padding: "12px", borderTop: "1px solid var(--color-border-default)", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                      <i className="ri-time-line text-warning" style={{ fontSize: "18px" }}></i>
+                      <span style={{ fontSize: "12px", fontWeight: "600", color: "#B06000" }}>
+                        Chat Request Pending. You can type messages once the seller accepts.
+                      </span>
+                    </div>
+                  ) : activeChat.status === "rejected" ? (
+                    <div style={{ backgroundColor: "#FCE8E6", padding: "12px", borderTop: "1px solid var(--color-border-default)", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                      <i className="ri-error-warning-line text-danger" style={{ fontSize: "18px" }}></i>
+                      <span style={{ fontSize: "12px", fontWeight: "600", color: "#C5221F" }}>
+                        Seller declined this request. Conversation locked forever.
+                      </span>
+                    </div>
+                  ) : activeChat.status === "closed" ? (
+                    <div style={{ backgroundColor: "var(--color-bg-surface-2)", padding: "12px", borderTop: "1px solid var(--color-border-default)", textAlign: "center" }}>
+                      <span style={{ fontSize: "12px", color: "var(--color-text-secondary)", fontWeight: "600" }}>
+                        This conversation has been closed.
+                      </span>
+                    </div>
+                  ) : (
+                    <form className="chat-input-row-bar" onSubmit={handleSendMessage}>
+                      <input 
+                        type="text" 
+                        placeholder="Type a message..."
+                        value={chatInput}
+                        onChange={handleChatInputChange}
+                        maxLength={1000}
+                      />
+                      <button type="submit" className="btn btn-brand" disabled={!chatInput.trim()}>
+                        <i className="ri-send-plane-fill"></i>
+                      </button>
+                    </form>
+                  )}
                 </>
               ) : (
                 <div className="chat-welcome-pane">
@@ -1144,6 +1628,144 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
         </div>
       )}
 
+      {/* --- CHAT INTRO MESSAGE MODAL --- */}
+      {showIntroModal && introBook && (
+        <div className="modal-backdrop-overlay" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+          <div className="modal-card-container animate-slide-up" style={{ backgroundColor: "var(--color-bg-page)", padding: "24px", borderRadius: "12px", width: "400px", maxWidth: "90%", boxShadow: "0 10px 25px rgba(0,0,0,0.15)" }}>
+            <h3 style={{ margin: "0 0 12px 0", fontSize: "16px", fontWeight: "700" }}>Start Chat with Seller</h3>
+            <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", margin: "0 0 16px 0" }}>
+              Send an introductory message for <strong>"{introBook.title}"</strong>. Buyers can only send one message before the seller accepts.
+            </p>
+            <div className="form-group-field" style={{ marginBottom: "20px" }}>
+              <label style={{ fontSize: "11px", fontWeight: "600", marginBottom: "6px", display: "block" }}>Introductory Message</label>
+              <textarea 
+                className="form-control"
+                rows="3"
+                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--color-border-medium)", resize: "none" }}
+                value={introMessage}
+                onChange={(e) => setIntroMessage(e.target.value)}
+                maxLength={1000}
+              />
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+              <button className="btn btn-outline btn-sm" onClick={() => setShowIntroModal(false)}>Cancel</button>
+              <button className="btn btn-brand btn-sm" onClick={handleConfirmStartChat} disabled={!introMessage.trim()}>Send Request</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MOCK CHECKOUT WITH COUPON MODAL --- */}
+      {showCheckoutModal && activeChat?.listing && (
+        <div className="modal-backdrop-overlay" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+          <div className="modal-card-container animate-slide-up" style={{ backgroundColor: "var(--color-bg-page)", padding: "24px", borderRadius: "12px", width: "420px", maxWidth: "90%", boxShadow: "0 10px 25px rgba(0,0,0,0.15)" }}>
+            <h3 style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: "700", borderBottom: "1px solid var(--color-border-default)", paddingBottom: "12px" }}>
+              Checkout Book Listing
+            </h3>
+            
+            <div style={{ marginBottom: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                <span style={{ fontSize: "13px", color: "var(--color-text-secondary)" }}>Book Title:</span>
+                <span style={{ fontSize: "13px", fontWeight: "700", textAlign: "right" }}>{activeChat.listing.title}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                <span style={{ fontSize: "13px", color: "var(--color-text-secondary)" }}>Original Price:</span>
+                <span style={{ fontSize: "13px", fontWeight: "600" }}>₹{activeChat.listing.price}</span>
+              </div>
+              {appliedCoupon && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", color: "var(--color-brand)" }}>
+                  <span style={{ fontSize: "13px" }}>Discount Applied:</span>
+                  <span style={{ fontSize: "13px", fontWeight: "600" }}>-₹{couponDiscount}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--color-border-default)", paddingTop: "12px", marginTop: "12px" }}>
+                <span style={{ fontSize: "14px", fontWeight: "700" }}>Total Amount:</span>
+                <span style={{ fontSize: "16px", fontWeight: "700", color: "var(--color-brand)" }}>
+                  ₹{Math.max(0, activeChat.listing.price - couponDiscount)}
+                </span>
+              </div>
+            </div>
+
+            {/* Coupon Code block */}
+            <div style={{ background: "var(--color-bg-surface-2)", padding: "12px", borderRadius: "8px", marginBottom: "20px" }}>
+              <label style={{ fontSize: "11px", fontWeight: "700", display: "block", marginBottom: "6px" }}>Have a Negotiated Coupon?</label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input 
+                  type="text" 
+                  className="form-control"
+                  style={{ flex: 1, padding: "6px 12px", fontSize: "12px", borderRadius: "6px", border: "1px solid var(--color-border-medium)" }}
+                  placeholder="e.g. PM-XXXXXX"
+                  value={couponCodeInput}
+                  onChange={(e) => setCouponCodeInput(e.target.value)}
+                  disabled={!!appliedCoupon}
+                />
+                <button 
+                  className="btn btn-outline btn-xs" 
+                  onClick={handleApplyCoupon}
+                  disabled={!couponCodeInput.trim() || !!appliedCoupon || checkoutLoading}
+                >
+                  Apply
+                </button>
+              </div>
+              {appliedCoupon && (
+                <span style={{ fontSize: "11px", color: "var(--color-brand)", display: "block", marginTop: "4px", fontWeight: "600" }}>
+                  <i className="ri-checkbox-circle-fill"></i> Coupon "{appliedCoupon}" applied!
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+              <button className="btn btn-outline btn-sm" onClick={() => setShowCheckoutModal(false)} disabled={checkoutLoading}>Cancel</button>
+              <button className="btn btn-brand btn-sm" onClick={handleConfirmMockPurchase} disabled={checkoutLoading}>
+                {checkoutLoading ? "Processing..." : "Confirm & Pay (Mock)"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- AUTO REVIEW / RATING MODAL (Auto Review Request) --- */}
+      {showReviewModal && reviewedSeller && reviewedListing && (
+        <div className="modal-backdrop-overlay" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+          <form className="modal-card-container animate-slide-up" onSubmit={handleSubmitReview} style={{ backgroundColor: "var(--color-bg-page)", padding: "24px", borderRadius: "12px", width: "400px", maxWidth: "90%", boxShadow: "0 10px 25px rgba(0,0,0,0.15)" }}>
+            <h3 style={{ margin: "0 0 12px 0", fontSize: "16px", fontWeight: "700" }}>Review Your Purchase</h3>
+            <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", margin: "0 0 16px 0" }}>
+              Share your experience purchasing <strong>"{reviewedListing.title}"</strong> from <strong>{reviewedSeller.name}</strong>.
+            </p>
+            
+            {/* Rating Stars Selector */}
+            <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "16px" }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <i 
+                  key={star} 
+                  className={star <= reviewRating ? "ri-star-fill" : "ri-star-line"} 
+                  style={{ fontSize: "28px", color: "#F4B400", cursor: "pointer" }}
+                  onClick={() => setReviewRating(star)}
+                ></i>
+              ))}
+            </div>
+
+            <div className="form-group-field" style={{ marginBottom: "20px" }}>
+              <label style={{ fontSize: "11px", fontWeight: "600", marginBottom: "6px", display: "block" }}>Comments (Optional)</label>
+              <textarea 
+                className="form-control"
+                rows="3"
+                placeholder="How was the textbook condition? Did you coordinate meet location successfully?"
+                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--color-border-medium)", resize: "none" }}
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+              />
+            </div>
+            
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowReviewModal(false)}>Skip</button>
+              <button type="submit" className="btn btn-brand btn-sm" disabled={reviewLoading}>
+                {reviewLoading ? "Submitting..." : "Submit Review"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
     </div>
   );

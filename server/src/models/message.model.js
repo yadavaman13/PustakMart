@@ -13,10 +13,16 @@ const messageSchema = new mongoose.Schema(
       ref: "user",
       required: true,
     },
-    content: {
+    message: {
       type: String,
-      required: [true, "Message content is required"],
+      required: [true, "Message text is required"],
       trim: true,
+      maxlength: 1000, // Security: max 1000 chars
+    },
+    messageType: {
+      type: String,
+      enum: ["text", "image", "offer", "system"],
+      default: "text",
     },
     isRead: {
       type: Boolean,

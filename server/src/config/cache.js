@@ -7,14 +7,20 @@ const redis = new Redis({
     password: envConfig.REDIS_PASSWORD,
 
     connectTimeout: 10000,
+    lazyConnect: false,          // connect immediately on startup
 
     retryStrategy(times) {
-        // Reconnect infinitely with a maximum delay of 3 seconds
-        const delay = Math.min(times * 100, 3000);
-        console.log(`Retrying Redis connection (attempt ${times}) in ${delay}ms...`);
+        if (times > 10) {
+            console.error('Redis retry attempts exhausted');
+            return null;
+        }
+
+        const delay = Math.min(times * 200, 2000);
+        console.log(`Retrying Redis connection in ${delay}ms...`);
         return delay;
     },
 
+    // null = queue commands indefinitely during reconnect (don't fail them)
     maxRetriesPerRequest: null,
 
     enableReadyCheck: true,

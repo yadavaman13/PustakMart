@@ -38,6 +38,10 @@ const paymentSchema = new mongoose.Schema(
       ref: "listing",
       required: true,
     },
+    coupon: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "coupon",
+    },
   },
   {
     timestamps: true,
