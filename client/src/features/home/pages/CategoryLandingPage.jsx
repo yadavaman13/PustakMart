@@ -102,7 +102,7 @@ export default function CategoryLandingPage() {
       <header className="home-header">
         <div className="header-left">
           <div className="brand-logo-wrapper" onClick={() => navigate("/")}>
-            <img src={logoImg} alt="PustakMart Logo" className="header-logo" />
+            <img src={logoImg} alt="PustakMart Logo" className="logo-icon-img" />
             <div className="brand-name-block">
               <span className="brand-title-text" style={{ fontFamily: "var(--font-heading)", fontWeight: 800, fontSize: "1.5rem", color: "var(--color-text-primary)" }}>PustakMart</span>
             </div>
@@ -210,12 +210,40 @@ export default function CategoryLandingPage() {
                       <span className="price-val">₹{book.price}</span>
                     </div>
                     
-                    <button 
-                      className="btn-card-buy"
-                      onClick={() => navigate(user ? "/dashboard" : "/auth")}
-                    >
-                      Buy Now
-                    </button>
+                    {(() => {
+                      const sellerId = book.seller?._id || book.seller;
+                      const currentUserId = user?.id || user?._id;
+                      const isOwnListing = sellerId && currentUserId && sellerId.toString() === currentUserId.toString();
+                      
+                      if (book.status === "sold") {
+                        return (
+                          <button className="btn-card-buy" disabled style={{ opacity: 0.6, cursor: "not-allowed", backgroundColor: "var(--color-bg-surface-3)", color: "var(--color-text-secondary)" }}>
+                            Sold
+                          </button>
+                        );
+                      } else if (book.status === "reserved") {
+                        return (
+                          <button className="btn-card-buy" disabled style={{ opacity: 0.6, cursor: "not-allowed", backgroundColor: "var(--color-bg-surface-3)", color: "var(--color-text-secondary)" }}>
+                            Reserved
+                          </button>
+                        );
+                      } else if (isOwnListing) {
+                        return (
+                          <button className="btn-card-buy" onClick={() => navigate("/dashboard?mode=seller&tab=listings")}>
+                            Mine
+                          </button>
+                        );
+                      } else {
+                        return (
+                          <button 
+                            className="btn-card-buy"
+                            onClick={() => navigate(user ? `/checkout/${book._id}` : "/auth")}
+                          >
+                            Buy Now
+                          </button>
+                        );
+                      }
+                    })()}
                   </div>
                 </div>
               </article>

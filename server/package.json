@@ -29,5 +29,8 @@
     "nodemailer": "^9.0.0",
     "razorpay": "^2.9.6",
     "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "artillery": "^2.0.21"
   }
 }

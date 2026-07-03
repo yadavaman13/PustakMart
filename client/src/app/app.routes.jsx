@@ -12,6 +12,8 @@ const DashboardLayout = lazy(() => import("../features/dashboard/components/Dash
 
 // New SEO pages
 const CategoryLandingPage = lazy(() => import("../features/home/pages/CategoryLandingPage.jsx"));
+const CheckoutPage = lazy(() => import("../features/home/pages/CheckoutPage.jsx"));
+const MarketplacePage = lazy(() => import("../features/home/pages/MarketplacePage.jsx"));
 
 // Reusable Loading Fallback for Suspense
 const RouteLoader = () => (
@@ -128,6 +130,22 @@ export const AppRoutes = () => {
         <Route
           path="/category/:categoryId"
           element={<CategoryLandingPage />}
+        />
+
+        {/* Secure Checkout Page Route */}
+        <Route
+          path="/checkout/:listingId"
+          element={
+            <ProtectedRoute>
+              <CheckoutPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Marketplace Page Route */}
+        <Route
+          path="/marketplace"
+          element={<MarketplacePage />}
         />
 
         <Route

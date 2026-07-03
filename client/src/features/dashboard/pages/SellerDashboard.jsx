@@ -16,7 +16,8 @@ import {
   getImageKitAuthParamsApi,
   acceptConversationApi,
   rejectConversationApi,
-  generateCouponApi
+  generateCouponApi,
+  getSellerEarningsApi
 } from "../services/dashboard.api.js";
 import { useSocket } from "../../shared/context/SocketContext.jsx";
 import axios from "axios";
@@ -78,6 +79,15 @@ export const SellerDashboard = ({ activeTab }) => {
   const [couponDiscountAmount, setCouponDiscountAmount] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
 
+  // Seller earnings state
+  const [earningsData, setEarningsData] = useState({
+    grossEarnings: 0,
+    commission: 0,
+    netEarnings: 0,
+    booksSold: 0,
+    monthlyAnalytics: []
+  });
+
   const clearAlerts = () => {
     setError(null);
     setSuccess(null);
@@ -118,6 +128,18 @@ export const SellerDashboard = ({ activeTab }) => {
       const chatsRes = await getConversationsApi();
       if (chatsRes.success) {
         setChats(chatsRes.data?.conversations || []);
+      }
+
+      // Fetch Seller Earnings & Analytics
+      const earningsRes = await getSellerEarningsApi();
+      if (earningsRes.success) {
+        setEarningsData({
+          grossEarnings: earningsRes.grossEarnings || 0,
+          commission: earningsRes.commission || 0,
+          netEarnings: earningsRes.netEarnings || 0,
+          booksSold: earningsRes.booksSold || 0,
+          monthlyAnalytics: earningsRes.monthlyAnalytics || []
+        });
       }
     } catch (err) {
       console.error(err);
@@ -1162,104 +1184,99 @@ export const SellerDashboard = ({ activeTab }) => {
         <div className="tab-view-container sales-analytics-view animate-fade">
           <div className="grid-summary-metric-cards">
             <div className="metric-box-card">
-              <div className="card-icon-circle seller-color"><i className="ri-money-dollar-circle-fill"></i></div>
+              <div className="card-icon-circle seller-color"><i className="ri-money-dollar-box-line"></i></div>
               <div className="card-numeric-info">
-                <h3>₹{sellerListings.filter(l => l.status === "sold").reduce((sum, l) => sum + (l.price || 0), 0)}</h3>
-                <p>Total Revenue</p>
+                <h3>₹{(earningsData.grossEarnings || 0).toLocaleString()}</h3>
+                <p>Gross Earnings</p>
               </div>
             </div>
 
             <div className="metric-box-card">
-              <div className="card-icon-circle seller-color"><i className="ri-hand-coin-fill"></i></div>
+              <div className="card-icon-circle seller-color"><i className="ri-percent-line"></i></div>
               <div className="card-numeric-info">
-                <h3>{soldCount}</h3>
+                <h3>₹{(earningsData.commission || 0).toLocaleString()}</h3>
+                <p>Platform Commission (10%)</p>
+              </div>
+            </div>
+
+            <div className="metric-box-card">
+              <div className="card-icon-circle seller-color"><i className="ri-wallet-3-line"></i></div>
+              <div className="card-numeric-info">
+                <h3>₹{(earningsData.netEarnings || 0).toLocaleString()}</h3>
+                <p>Net Earnings</p>
+              </div>
+            </div>
+
+            <div className="metric-box-card">
+              <div className="card-icon-circle seller-color"><i className="ri-book-open-line"></i></div>
+              <div className="card-numeric-info">
+                <h3>{earningsData.booksSold || 0}</h3>
                 <p>Books Sold</p>
-              </div>
-            </div>
-
-            <div className="metric-box-card">
-              <div className="card-icon-circle seller-color"><i className="ri-percent-fill"></i></div>
-              <div className="card-numeric-info">
-                <h3>{totalViews > 0 ? ((soldCount / totalViews) * 100).toFixed(1) : 0}%</h3>
-                <p>Conversion Rate</p>
-              </div>
-            </div>
-
-            <div className="metric-box-card">
-              <div className="card-icon-circle seller-color"><i className="ri-price-tag-3-fill"></i></div>
-              <div className="card-numeric-info">
-                <h3>₹{soldCount > 0 ? (sellerListings.filter(l => l.status === "sold").reduce((sum, l) => sum + (l.price || 0), 0) / soldCount).toFixed(0) : 0}</h3>
-                <p>Avg Book Price</p>
               </div>
             </div>
           </div>
 
           <div className="split-view-container">
-            {/* Left: Conversion Funnel */}
+            {/* Left: Monthly Sales volume chart */}
             <div className="feed-panel listings-feed-panel">
-              <h2 className="panel-title-heading">Sales Conversion Funnel</h2>
-              <p className="panel-description-text">Tracks student buyer conversion from book pageview to successful trade.</p>
+              <h2 className="panel-title-heading">Monthly Sales (Volume)</h2>
+              <p className="panel-description-text">Quantity of academic book listings successfully traded.</p>
               
-              <div className="funnel-container" style={{ marginTop: "20px" }}>
-                <div className="funnel-stage funnel-stage-views">
-                  <div className="stage-progress-bar" style={{ width: "100%" }}>
-                    <span className="stage-label"><i className="ri-eye-line"></i> 1. Views</span>
-                    <span className="stage-value">{totalViews} views (100%)</span>
-                  </div>
+              <div className="bar-charts-container" style={{ marginTop: "24px" }}>
+                <div className="chart-vertical-bars">
+                  {earningsData.monthlyAnalytics && earningsData.monthlyAnalytics.length > 0 ? (
+                    earningsData.monthlyAnalytics.map((data, idx) => {
+                      const maxVal = Math.max(...earningsData.monthlyAnalytics.map(d => d.salesCount), 1);
+                      const pct = (data.salesCount / maxVal) * 100;
+                      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                      const label = `${monthNames[data.month - 1] || data.month} ${data.year}`;
+                      return (
+                        <div className="chart-bar-row" key={idx}>
+                          <span className="bar-label">{label}</span>
+                          <div className="bar-wrapper">
+                            <div className="bar-fill seller-color" style={{ width: `${Math.max(6, pct)}%` }}></div>
+                          </div>
+                          <span className="bar-value">{data.salesCount} sold</span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p style={{ color: "var(--color-text-secondary)", fontSize: "0.9rem", padding: "16px 0" }}>
+                      No sales volume history recorded yet.
+                    </p>
+                  )}
                 </div>
-
-                <div className="funnel-stage funnel-stage-chats">
-                  <div className="stage-progress-bar" style={{ width: totalViews > 0 ? `${Math.max(40, Math.min(100, (chats.length / totalViews) * 100))}%` : "50%" }}>
-                    <span className="stage-label"><i className="ri-chat-3-line"></i> 2. Chats</span>
-                    <span className="stage-value">{chats.length} inquiries ({totalViews > 0 ? ((chats.length / totalViews) * 100).toFixed(1) : 0}%)</span>
-                  </div>
-                </div>
-
-                <div className="funnel-stage funnel-stage-sales">
-                  <div className="stage-progress-bar" style={{ width: totalViews > 0 ? `${Math.max(25, Math.min(100, (soldCount / totalViews) * 100))}%` : "30%" }}>
-                    <span className="stage-label"><i className="ri-checkbox-circle-line"></i> 3. Sales</span>
-                    <span className="stage-value">{soldCount} sold ({totalViews > 0 ? ((soldCount / totalViews) * 100).toFixed(1) : 0}%)</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="funnel-insight-summary">
-                <i className="ri-lightbulb-line"></i>
-                <p>Your views-to-sales conversion rate is <strong>{totalViews > 0 ? ((soldCount / totalViews) * 100).toFixed(1) : 0}%</strong>. Fast response times in Chat Inquiries will boost completion rates!</p>
               </div>
             </div>
 
-            {/* Right: Revenue by Category */}
+            {/* Right: Monthly Earnings value chart */}
             <div className="feed-panel activity-feed-panel">
-              <h2 className="panel-title-heading">Revenue by Category</h2>
-              <p className="panel-description-text">Total revenue generated from academic book categories.</p>
+              <h2 className="panel-title-heading">Monthly Net Earnings (Value)</h2>
+              <p className="panel-description-text">Payout amounts credited after platform commission deductions.</p>
               
-              <div className="bar-charts-container" style={{ marginTop: "16px" }}>
+              <div className="bar-charts-container" style={{ marginTop: "24px" }}>
                 <div className="chart-vertical-bars">
-                  {Object.entries({
-                    engineering: "Engineering",
-                    medical: "Medical",
-                    school: "School",
-                    competitive_exam: "Competitive",
-                    novel: "Novels",
-                    other: "Others"
-                  }).map(([cat, label]) => {
-                    const catSold = sellerListings.filter(l => l.category?.toLowerCase() === cat && l.status === "sold");
-                    const catRev = catSold.reduce((sum, l) => sum + (l.price || 0), 0);
-                    const maxRevenue = Math.max(...["engineering", "medical", "school", "competitive_exam", "novel", "other"].map(c => 
-                      sellerListings.filter(l => l.category?.toLowerCase() === c && l.status === "sold").reduce((sum, l) => sum + (l.price || 0), 0)
-                    ), 1);
-                    const pct = (catRev / maxRevenue) * 100;
-                    return (
-                      <div className="chart-bar-row" key={cat}>
-                        <span className="bar-label">{label}</span>
-                        <div className="bar-wrapper">
-                          <div className="bar-fill seller-color" style={{ width: `${Math.max(4, pct)}%` }}></div>
+                  {earningsData.monthlyAnalytics && earningsData.monthlyAnalytics.length > 0 ? (
+                    earningsData.monthlyAnalytics.map((data, idx) => {
+                      const maxVal = Math.max(...earningsData.monthlyAnalytics.map(d => d.earnings), 1);
+                      const pct = (data.earnings / maxVal) * 100;
+                      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                      const label = `${monthNames[data.month - 1] || data.month} ${data.year}`;
+                      return (
+                        <div className="chart-bar-row" key={idx}>
+                          <span className="bar-label">{label}</span>
+                          <div className="bar-wrapper">
+                            <div className="bar-fill seller-color" style={{ width: `${Math.max(6, pct)}%` }}></div>
+                          </div>
+                          <span className="bar-value">₹{(data.earnings || 0).toLocaleString()}</span>
                         </div>
-                        <span className="bar-value">₹{catRev}</span>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  ) : (
+                    <p style={{ color: "var(--color-text-secondary)", fontSize: "0.9rem", padding: "16px 0" }}>
+                      No earnings payout history recorded yet.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import useAuth from "../../auth/hooks/useAuth.js";
 import { 
   getHomeListingsApi, 
@@ -31,6 +31,7 @@ import ProfileSettingsView from "../components/ProfileSettingsView.jsx";
 export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
   const { user, checkSession } = useAuth();
   const [, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   
   // Shared Loader and Messages
   const [loading, setLoading] = useState(false);
@@ -844,12 +845,17 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
                           <span>{book.collegeName}</span>
                         </div>
                         <div className="button-group-row">
-                          <button className="btn btn-outline" onClick={() => handleToggleSave(book._id)}>
-                            <i className="ri-bookmark-line"></i> Save
+                          <button className="btn btn-outline" onClick={() => handleToggleSave(book._id)} title="Save Book">
+                            <i className="ri-bookmark-line"></i>
                           </button>
                           <button className="btn btn-brand" onClick={() => handleStartChatFromBook(book)}>
-                            Chat Now
+                            Chat
                           </button>
+                          {book.status === "active" && (book.seller?._id || book.seller) !== (user?.id || user?._id) && (
+                            <button className="btn btn-brand" style={{ backgroundColor: "var(--color-brand)", color: "var(--color-text-on-brand)", flex: 1 }} onClick={() => navigate(`/checkout/${book._id}`)}>
+                              Buy
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -961,12 +967,17 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
                       <span>{book.collegeName}</span>
                     </div>
                     <div className="button-group-row">
-                      <button className="btn btn-outline" onClick={() => handleToggleSave(book._id)}>
-                        <i className="ri-bookmark-line"></i> Bookmark
+                      <button className="btn btn-outline" onClick={() => handleToggleSave(book._id)} title="Bookmark Book">
+                        <i className="ri-bookmark-line"></i>
                       </button>
                       <button className="btn btn-brand" onClick={() => handleStartChatFromBook(book)}>
-                        Initiate Exchange / Buy
+                        Chat
                       </button>
+                      {book.status === "active" && (book.seller?._id || book.seller) !== (user?.id || user?._id) && (
+                        <button className="btn btn-brand" style={{ backgroundColor: "var(--color-brand)", color: "var(--color-text-on-brand)", flex: 1 }} onClick={() => navigate(`/checkout/${book._id}`)}>
+                          Buy
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1239,12 +1250,17 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
                         <span>{book.collegeName}</span>
                       </div>
                       <div className="button-group-row">
-                        <button className="btn btn-outline-danger" onClick={() => handleToggleSave(book._id)}>
-                          <i className="ri-bookmark-fill"></i> Remove
+                        <button className="btn btn-outline-danger" onClick={() => handleToggleSave(book._id)} title="Remove Book">
+                          <i className="ri-bookmark-fill"></i>
                         </button>
                         <button className="btn btn-brand" onClick={() => handleStartChatFromBook(book)}>
-                          Contact Seller
+                          Contact
                         </button>
+                        {book.status === "active" && (book.seller?._id || book.seller) !== (user?.id || user?._id) && (
+                          <button className="btn btn-brand" style={{ backgroundColor: "var(--color-brand)", color: "var(--color-text-on-brand)", flex: 1 }} onClick={() => navigate(`/checkout/${book._id}`)}>
+                            Buy
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

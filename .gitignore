@@ -1,3 +1,6 @@
 .ai
 scratch
-implementation_seo.md
+docs
+.agents 
+skills-lock.json
+install-skills.ps1

@@ -77,7 +77,7 @@ export async function registerSendOtpController(req, res) {
     }
 
     // Hash password before storing in Redis
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 7);
 
     // Generate and store OTP
     const otp = generateOtp();
@@ -847,7 +847,7 @@ export async function resetPasswordController(req, res) {
     }
 
     // Hash new password and save
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 7);
     user.password = hashedPassword;
     user.isVerified = true;
     await user.save();
@@ -890,7 +890,7 @@ export async function changePasswordController(req, res) {
       });
     }
 
-    user.password = await bcrypt.hash(newPassword, 10);
+    user.password = await bcrypt.hash(newPassword, 7);
     await user.save();
 
     res.status(200).json({

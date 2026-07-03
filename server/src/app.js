@@ -18,6 +18,8 @@ import { feedRoute } from "./routes/feeds.routes.js";
 import { adminRoute } from "./routes/admin.routes.js";
 import { mediaRoute } from "./routes/media.routes.js";
 import { paymentRoute } from "./routes/payments.routes.js";
+import { listingsCheckoutRoute } from "./routes/listings.routes.js";
+import { sellerRoute } from "./routes/seller.routes.js";
 
 const app = express();
 
@@ -47,6 +49,9 @@ app.use("/api/feeds", feedRoute);
 app.use("/api/admin", adminRoute);
 app.use("/api/media", mediaRoute);
 app.use("/api/payment", paymentRoute);
+app.use("/api/payments", paymentRoute);
+app.use("/api/listings", listingsCheckoutRoute);
+app.use("/api/seller", sellerRoute);
 
 // Catch-all route for unmatched paths (404)
 app.use((req, res, next) => {

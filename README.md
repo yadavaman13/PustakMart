@@ -74,11 +74,14 @@ Academic textbooks and study materials are highly expensive, yet their utility i
 * **Open Book Requests**: Submit book requests detailing syllabus needs and custom budget thresholds.
 * **Bookmarks & Favorites**: Track desired listings and receive status changes.
 * **Live Inquiries**: Start real-time chat threads directly from listing pages to coordinate face-to-face meetups.
+* **Secure Checkout & Discount Coupons**: Purchase books directly using the integrated Razorpay checkout overlay. Supports custom seller-issued discount coupons.
 * **Rating System**: Submit feedback and rate sellers after completing a transaction.
 
 ### 💼 Verified Seller Workspace
 * **Analytics Dashboard**: Access active listing counters, total completed sales, aggregate views, and customer ratings.
+* **Earnings & Sales Analytics**: Access dynamic month-over-month graphs charting gross sales, net earnings (after 10% commission processing), and transaction volumes.
 * **Single & Semester Bundle Uploads**: Publish individual books or semester course packs with condition ratings and cover files.
+* **Conversational Discounts**: Generate and send custom coupon codes directly inside active buyer chats, automatically posting system alerts.
 * **Active Demand Matching**: Browse campus-wide buyer requests and contact students to complete trades.
 
 ### 👑 Admin Control Panel
@@ -94,6 +97,7 @@ Academic textbooks and study materials are highly expensive, yet their utility i
 ### 🎨 Frontend
 - **Core Library**: React 19
 - **Build Tool**: Vite 7
+- **Routing**: React Router 6 (Lazy-loaded Suspense routing for optimized FCP/LCP performance SEO)
 - **Styling**: Vanilla SCSS (CSS variables, HSL color tokens, CSS layouts, and micro-animations)
 - **HTTP Client**: Axios
 - **Real-Time Client**: Socket.io Client
@@ -106,6 +110,8 @@ Academic textbooks and study materials are highly expensive, yet their utility i
 - **Media Upload Broker**: ImageKit.io Node SDK
 - **Payment Verification**: Razorpay Node SDK
 - **Email Delivery**: NodeMailer with Google OAuth2
+- **Cryptography & Hashing**: Bcrypt (Optimized to **7 salt rounds** for peak login throughput)
+- **Load Testing**: Artillery
 
 ### 🗄️ Database Models (Mongoose)
 - `users`: User metadata, role, verification status, and admin rejection comments.
@@ -114,7 +120,8 @@ Academic textbooks and study materials are highly expensive, yet their utility i
 - `conversations`: Participant array, last message summary, and update timestamps.
 - `messages`: Sender, content, conversation ID, and delivery timestamps.
 - `notifications`: Recipient, message, read flag, and event category tags.
-- `payments`: Razorpay order/payment records, billing info, and completion status.
+- `coupons`: Centralized discount coupon codes (fixed/percentage deductions, expiration dates, user/listing restrictions, and chat-negotiated mappings).
+- `payments`: Razorpay transaction logs, ledger calculations (marketplace fee, commission splits), coupon links, transaction status, and pre-save sync hooks.
 - `reports`: Flagged listings, reporting user, infraction reason, and status.
 - `reviews`: Seller, buyer, review text, transaction listing, and rating stars.
 - `blacklistTokens`: Blacklisted JWT tokens for secure logout cycles.
@@ -188,7 +195,7 @@ PustakMart/
     │   ├── models/             # Mongoose Schemas (listings, reviews, blacklist)
     │   ├── routes/             # Endpoints routers
     │   └── services/           # Payment brokers, OAuth2 SMTP email handlers
-    ├── test_imagekit_upload.js # Upload diagnostic script
+    ├── tests/                  # Automated integration tests, load tests, and seed scripts
     └── package.json
 ```
 
@@ -203,12 +210,15 @@ PustakMart/
 - `/reset-password` - Password reset gateway.
 - `/dashboard` - User view panel (Home feed, browse catalog, request book, messages, alert notifications, settings).
 - `/dashboard?mode=seller` - Seller workspace (Analytics charts, listings, publish listing, client requests).
+- `/marketplace` - Advanced marketplace search catalog.
+- `/category/:categoryId` - Category landing pages.
+- `/checkout/:listingId` - Secure checkout screen (requires authentication).
 - `/admin` - Admin HUD (Overview analytics, users status control, catalog listing, flagged reviews).
 
 ### 🌐 Backend API Endpoints
 
 #### 🔒 Auth & Profile Routes (`/api/auth`)
-* `POST /register/send-otp` - Validates inputs, checks Redis rate limit, sends registration OTP.
+* `POST /register/send-otp` - Validates inputs, checks Redis rate limit, sends registration OTP (hashing password via Bcrypt at 7 salt rounds).
 * `POST /register/verify-otp` - Verifies OTP (max 3 attempts), creates DB user document, and issues JWT cookie.
 * `POST /register/resend-otp` - Re-evaluates rate limits, regenerates OTP, and sends email.
 * `POST /login` - Audits credentials, checks block status, issues JWT session cookie.
@@ -223,28 +233,33 @@ PustakMart/
 * `POST /forgot-password/verify-otp` - Verifies OTP, initializes reset session token.
 * `POST /reset-password` - Resets account password using token.
 
-#### 📚 Listings Routes (`/api/listings`)
+#### 📚 Listings Routes (`/api/book` & `/api/listings`)
 * `POST /` - Publishes a new academic listing.
 * `GET /` - Queries all listings with search queries (title, category, department).
 * `GET /:id` - Fetches single book details and increments views counter.
 * `PUT /:id` - Updates listing details.
 * `DELETE /:id` - Removes listing.
 * `PATCH /:id/sold` - Marks book listing state as SOLD.
+* `GET /api/listings/:id/checkout` - Retrieves book details, seller ratings stats, and billing breakdown (book price, ₹5 marketplace fee, optional coupon validation) for checkout page.
 
 #### 📋 Book Requests Routes (`/api/book-requests`)
 * `POST /` - Publishes a new book request.
 * `GET /` - Retrieves open book requests on campus.
 * `DELETE /:id` - Cancels book request.
 
-#### 💬 Chat Routes (`/api/chats`)
+#### 💬 Chat Routes (`/api/chats` & `/api/conversations`)
 * `GET /` - Lists active conversations.
 * `GET /:id` - Returns message history.
 * `POST /` - Creates new conversation.
 * `POST /:id/message` - Sends text message.
+* `POST /:id/coupon` - Seller generates a custom discount coupon code (`couponCode`) for the buyer in an active conversation.
 
-#### 💳 Payments (`/api/payments`)
-* `POST /create-order` - Requests a new Razorpay order ID.
-* `POST /verify-payment` - Verifies Razorpay payment signatures.
+#### 💳 Payments (`/api/payment` & `/api/payments`)
+* `POST /create-order` / `POST /create` - Requests a new Razorpay order ID. Accepts optional `couponCode`. Deactivates duplicate pending attempts.
+* `POST /verify` / `POST /verify-payment` - Verifies Razorpay payment signatures using HMAC-SHA256, sets payment to `completed`/`paid`, marks coupon as used, transitions listing to `reserved` (holding status), writes chat logs, and issues alerts.
+
+#### 📊 Seller Earnings & Analytics (`/api/seller`)
+* `GET /earnings` - Aggregates seller overall metrics (gross earnings, 10% commission, net earnings, books sold) and groups sales month-by-month for performance analytics using MongoDB aggregation pipelines.
 
 ---
 
@@ -338,8 +353,15 @@ Access the portal:
 | `REDIS_PORT` | Server | Redis server port | Yes |
 | `REDIS_PASSWORD` | Server | Redis server access credentials | Yes |
 | `EMAIL_USER` | Server | GMail Address for OTP delivery | Yes |
+| `CLIENT_ID` | Server | Google OAuth2 Client ID for SMTP Nodemailer | Yes |
+| `CLIENT_SECRET` | Server | Google OAuth2 Client Secret for SMTP Nodemailer | Yes |
+| `REFRESH_TOKEN` | Server | Google OAuth2 Refresh Token for SMTP Nodemailer | Yes |
 | `IMAGEKIT_PUBLIC_KEY` | Server & Client | ImageKit Client public token | Yes |
 | `IMAGEKIT_PRIVATE_KEY`| Server | ImageKit API upload key | Yes |
+| `IMAGEKIT_URL_ENDPOINT`| Server | ImageKit public URL endpoint | Yes |
+| `RAZORPAY_KEY_ID` | Server & Client | Razorpay Public Key ID | Yes |
+| `RAZORPAY_KEY_SECRET` | Server | Razorpay Secret API Key | Yes |
+| `CLIENT_ORIGINS` / `ALLOWED_CLIENT_ORIGIN` | Server | Whitelisted client origins for CORS | Yes |
 
 ---
 
@@ -348,6 +370,12 @@ Access the portal:
 ### Backend (`/server`)
 * `npm run dev` - Starts development server with nodemon auto-reload.
 * `npm start` - Starts production backend server.
+* `node tests/test_payment.js` - Runs automated payment signature verification flow tests.
+* `node tests/test_email.js` - Runs Nodemailer SMTP Google OAuth2 verification tests.
+* `node tests/test_redis.js` - Runs Redis connectivity and cache operations tests.
+* `node tests/test_otp_flow.js` - Runs registration OTP and recovery session flow tests.
+* `npx artillery run tests/login-load-test.yml` - Executes Login API concurrency load tests.
+* `npx artillery run tests/homepage-load-test.yml` - Executes Homepage flow concurrency load tests.
 
 ### Frontend (`/client`)
 * `npm run dev` - Launches Vite local development server.

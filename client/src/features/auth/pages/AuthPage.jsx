@@ -22,6 +22,8 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [uiError, setUiError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
 
   // Fields state
   const [email, setEmail] = useState("");
@@ -324,13 +326,37 @@ export default function AuthPage() {
             </div>
             <div className="auth-form-group">
               <label>Password</label>
-              <input
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div className="auth-password-wrapper" style={{ position: "relative" }}>
+                <input
+                  type={showLoginPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ paddingRight: "40px", width: "100%" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword(!showLoginPassword)}
+                  style={{
+                    position: "absolute",
+                    right: "12px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--color-text-secondary)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "4px"
+                  }}
+                  aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                >
+                  <i className={showLoginPassword ? "ri-eye-off-line" : "ri-eye-line"}></i>
+                </button>
+              </div>
             </div>
             
             <a className="auth-action-link" onClick={() => switchView("forgot")}>
@@ -380,13 +406,37 @@ export default function AuthPage() {
             </div>
             <div className="auth-form-group">
               <label>Password</label>
-              <input
-                type="password"
-                placeholder="At least 8 characters"
-                value={regPassword}
-                onChange={(e) => setRegPassword(e.target.value)}
-                required
-              />
+              <div className="auth-password-wrapper" style={{ position: "relative" }}>
+                <input
+                  type={showRegPassword ? "text" : "password"}
+                  placeholder="At least 8 characters"
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  required
+                  style={{ paddingRight: "40px", width: "100%" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRegPassword(!showRegPassword)}
+                  style={{
+                    position: "absolute",
+                    right: "12px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--color-text-secondary)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "4px"
+                  }}
+                  aria-label={showRegPassword ? "Hide password" : "Show password"}
+                >
+                  <i className={showRegPassword ? "ri-eye-off-line" : "ri-eye-line"}></i>
+                </button>
+              </div>
               <PasswordStrengthMeter password={regPassword} />
             </div>
 

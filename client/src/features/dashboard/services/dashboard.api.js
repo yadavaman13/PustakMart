@@ -160,3 +160,9 @@ export const deleteAccountApi = async (data) => {
   const response = await api.delete("/auth/delete-account", { data });
   return response.data;
 };
+
+// 10. Seller Earnings Analytics API
+export const getSellerEarningsApi = async () => {
+  const response = await api.get("/seller/earnings");
+  return response.data;
+};
