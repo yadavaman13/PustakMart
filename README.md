@@ -415,5 +415,5 @@ Let's connect, share ideas, or collaborate:
 ---
 
 <div align="center">
-  Made with ❤️ by <a href="https://github.com/yadavaman13">Aman</a>
+  Made with ❤️ by <a href="https://www.yadavaman.tech">Aman</a>
 </div>
