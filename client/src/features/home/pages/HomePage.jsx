@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useHome } from "../hooks/useHome.js";
 import useAuth from "../../auth/hooks/useAuth.js";
@@ -36,6 +36,7 @@ function Counter({ value, trigger }) {
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
   const { listings, loading, error, fetchListings } = useHome();
 
@@ -192,16 +193,14 @@ export default function HomePage() {
         </div>
 
         <nav className="header-center-nav">
-          <a href="#browse">Browse</a>
-          <a href="#requests">Book Requests</a>
-          <a href="#become-seller">Become Seller</a>
-          <a href="#about">About</a>
+          <Link to="/" style={{ cursor: "pointer" }}>Home</Link>
+          <Link to="/marketplace" style={{ cursor: "pointer" }}>Marketplace</Link>
+          <a href="/#requests" style={{ cursor: "pointer" }}>Book Requests</a>
+          <a href="/#become-seller" style={{ cursor: "pointer" }}>Become Seller</a>
+          <a href="/#about" style={{ cursor: "pointer" }}>About</a>
         </nav>
 
         <div className="header-right">
-          <button className="nav-search-btn" onClick={() => setShowSearchModal(true)} title="Search Books">
-            <i className="ri-search-line"></i>
-          </button>
 
           {user ? (
             <div className="user-menu-wrapper" style={{ position: "relative" }}>
@@ -302,7 +301,7 @@ export default function HomePage() {
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
             <div className="badge-wrap">
-              📚 India's Student Book Marketplace
+              India's Student Book Marketplace
             </div>
             <h1>
               Find Affordable Books From Verified Seniors And Students Near You.
@@ -413,7 +412,7 @@ export default function HomePage() {
                 }}
                 transition={{ type: "spring", stiffness: 80, damping: 20 }}
               >
-                <p className="title">🎁 Semester 5 Bundle</p>
+                <p className="title">Semester 5 Bundle</p>
                 <p className="desc">Save ₹800 instantly</p>
               </motion.div>
 

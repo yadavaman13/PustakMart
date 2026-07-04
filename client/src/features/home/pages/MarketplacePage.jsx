@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useNavigate, Link, useSearchParams, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useHome } from "../hooks/useHome.js";
 import useAuth from "../../auth/hooks/useAuth.js";
 import SEO from "../../shared/components/SEO.jsx";
@@ -37,6 +38,7 @@ const SORT_OPTIONS = [
 
 export default function MarketplacePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParamsState] = useSearchParams();
   const { user, logout } = useAuth();
   const { listings, total, loading, error, fetchListings } = useHome();
@@ -187,10 +189,11 @@ export default function MarketplacePage() {
         </div>
 
         <nav className="header-center-nav">
-          <Link to="/">Home</Link>
-          <Link to="/marketplace" className="active-nav-link">Marketplace</Link>
+          <Link to="/" className={location.pathname === "/" ? "active-nav-link" : ""}>Home</Link>
+          <Link to="/marketplace" className={location.pathname === "/marketplace" ? "active-nav-link" : ""}>Marketplace</Link>
           <a href="/#requests">Book Requests</a>
           <a href="/#become-seller">Become Seller</a>
+          <a href="/#about">About</a>
         </nav>
 
         <div className="header-right">
@@ -204,31 +207,41 @@ export default function MarketplacePage() {
                 />
                 <i className="ri-arrow-down-s-line"></i>
               </div>
-              {showUserDropdown && (
-                <>
-                  <div className="dropdown-overlay" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }} onClick={() => setShowUserDropdown(false)} />
-                  <div className="user-dropdown-menu" style={{ position: "absolute", top: "100%", right: 0, zIndex: 101 }}>
-                    <div className="dropdown-user-info">
-                      <p className="user-name">{user.name}</p>
-                      <p className="user-email">{user.email}</p>
-                    </div>
-                    <hr className="dropdown-divider" />
-                    <button className="dropdown-menu-item" onClick={() => { setShowUserDropdown(false); navigate("/dashboard"); }}>
-                      <i className="ri-dashboard-line"></i>
-                      <span>Dashboard</span>
-                    </button>
-                    <button className="dropdown-menu-item logout-item" onClick={() => { setShowUserDropdown(false); logout(); }}>
-                      <i className="ri-logout-box-line"></i>
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                </>
-              )}
+              <AnimatePresence>
+                {showUserDropdown && (
+                  <>
+                    <div className="dropdown-overlay" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }} onClick={() => setShowUserDropdown(false)} />
+                    <motion.div 
+                      className="user-profile-dropdown-menu"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      style={{ top: "45px", right: 0 }}
+                    >
+                      <div className="dropdown-header-info">
+                        <h4>{user.name}</h4>
+                        <p>{user.email}</p>
+                      </div>
+                      <div className="dropdown-divider"></div>
+                      <button className="dropdown-menu-item" onClick={() => { setShowUserDropdown(false); navigate("/dashboard"); }}>
+                        <i className="ri-dashboard-3-line"></i>
+                        <span>Dashboard</span>
+                      </button>
+                      <div className="dropdown-divider"></div>
+                      <button className="dropdown-menu-item logout-item" onClick={() => { setShowUserDropdown(false); logout(); }}>
+                        <i className="ri-logout-box-line"></i>
+                        <span>Logout</span>
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
           ) : (
-            <button className="btn-login-header" onClick={() => navigate("/auth")}>
-              Sign In
-            </button>
+            <>
+              <button className="btn-login" onClick={() => navigate("/auth")}>Login</button>
+              <button className="btn-signup" onClick={() => navigate("/auth?mode=register")}>Sign Up</button>
+            </>
           )}
         </div>
       </header>
