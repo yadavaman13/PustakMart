@@ -70,8 +70,8 @@ export const getConversationsApi = async () => {
   return response.data;
 };
 
-export const createConversationApi = async (listingId, message) => {
-  const response = await api.post("/conversations", { listingId, message });
+export const createConversationApi = async (listingId, message, buyerId) => {
+  const response = await api.post("/conversations", { listingId, message, buyerId });
   return response.data;
 };
 

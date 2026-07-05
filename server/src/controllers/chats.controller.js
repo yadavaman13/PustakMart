@@ -16,7 +16,7 @@ function generateCouponCode() {
 // Start or retrieve a conversation for a specific book listing
 export async function createConversationController(req, res) {
   try {
-    const { listingId, message: introductoryMessage } = req.body;
+    const { listingId, buyerId: bodyBuyerId, message: introductoryMessage } = req.body;
 
     if (!listingId) {
       return res.status(400).json({
@@ -34,10 +34,28 @@ export async function createConversationController(req, res) {
     }
 
     const sellerId = listing.seller.toString();
-    const buyerId = req.user._id.toString();
+    
+    // Determine buyerId and conversation status based on initiator role
+    let buyerId;
+    let isSellerInitiating = false;
+
+    if (req.user._id.toString() === sellerId) {
+      // Seller is initiating conversation with requester
+      isSellerInitiating = true;
+      buyerId = bodyBuyerId;
+      if (!buyerId) {
+        return res.status(400).json({
+          success: false,
+          message: "Buyer ID is required when seller initiates the conversation",
+        });
+      }
+    } else {
+      // Buyer is initiating conversation with seller
+      buyerId = req.user._id.toString();
+    }
 
     // Rule 1: A seller cannot chat with themselves
-    if (sellerId === buyerId) {
+    if (sellerId === buyerId.toString()) {
       return res.status(400).json({
         success: false,
         message: "You already own this listing. Try managing it from your seller dashboard.",
@@ -47,7 +65,7 @@ export async function createConversationController(req, res) {
     // Rule 2: One Listing = One Conversation
     let conversation = await conversationModel.findOne({
       listing: listingId,
-      buyer: req.user._id,
+      buyer: buyerId,
     });
 
     if (conversation) {
@@ -68,12 +86,13 @@ export async function createConversationController(req, res) {
       });
     }
 
-    // Rule 3: Buyer Sends Chat Request -> Create Conversation pending
+    // Rule 3: Create Conversation
+    // If seller initiates, set status as accepted immediately so the buyer can reply
     conversation = await conversationModel.create({
       listing: listingId,
-      buyer: req.user._id,
+      buyer: buyerId,
       seller: listing.seller,
-      status: "pending",
+      status: isSellerInitiating ? "accepted" : "pending",
     });
 
     // Rule 4: Only First Message Allowed

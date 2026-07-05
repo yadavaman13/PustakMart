@@ -45,11 +45,7 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
   const [notifications, setNotifications] = useState([]);
   const [chats, setChats] = useState([]);
   
-  // Browse Book Search Filter states
-  const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [deptFilter, setDeptFilter] = useState("");
-  
+
   // Book Request creation states
   const [newRequestTitle, setNewRequestTitle] = useState("");
   const [newRequestDesc, setNewRequestDesc] = useState("");
@@ -111,8 +107,7 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
     clearAlerts();
     if (activeTab === "home") {
       fetchHomeOverviewData();
-    } else if (activeTab === "browse") {
-      fetchBrowseListings();
+
     } else if (activeTab === "requests") {
       fetchBookRequests();
     } else if (activeTab === "saved") {
@@ -129,8 +124,39 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
   const fetchHomeOverviewData = async () => {
     try {
       setLoading(true);
-      const listRes = await getHomeListingsApi({ limit: 5 });
-      if (listRes.success) setListings(listRes.listings);
+      
+      let fetchedListings = [];
+      
+      // 1. Try fetching listings matching both user's college and semester
+      if (user?.collegeName || user?.semester) {
+        const params = { limit: 5 };
+        if (user.collegeName) params.collegeName = user.collegeName;
+        if (user.semester) params.semester = user.semester;
+        
+        const listRes = await getHomeListingsApi(params);
+        if (listRes.success && listRes.listings?.length > 0) {
+          fetchedListings = listRes.listings;
+        }
+      }
+      
+      // 2. Fallback: Try fetching listings matching user's college only
+      if (fetchedListings.length === 0 && user?.collegeName) {
+        const params = { limit: 5, collegeName: user.collegeName };
+        const listRes = await getHomeListingsApi(params);
+        if (listRes.success && listRes.listings?.length > 0) {
+          fetchedListings = listRes.listings;
+        }
+      }
+      
+      // 3. Fallback: Fetch general trending listings (limit: 5)
+      if (fetchedListings.length === 0) {
+        const listRes = await getHomeListingsApi({ limit: 5 });
+        if (listRes.success) {
+          fetchedListings = listRes.listings || [];
+        }
+      }
+      
+      setListings(fetchedListings);
       
       const reqRes = await getBookRequestsApi();
       if (reqRes.success) setRequests(reqRes.requests || []);
@@ -147,24 +173,7 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
     }
   };
 
-  const fetchBrowseListings = async () => {
-    try {
-      setLoading(true);
-      const params = {};
-      if (searchQuery) params.search = searchQuery;
-      if (categoryFilter) params.category = categoryFilter;
-      if (deptFilter) params.department = deptFilter;
-      
-      const res = await getHomeListingsApi(params);
-      if (res.success) {
-        setListings(res.listings);
-      }
-    } catch (err) {
-      setError("Failed to fetch book catalog");
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const fetchBookRequests = async (showLoader = true) => {
     try {
@@ -896,101 +905,7 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
         </div>
       )}
 
-      {/* --- 2. BROWSE BOOKS VIEW --- */}
-      {activeTab === "browse" && !loading && (
-        <div className="tab-view-container browse-catalog-view animate-fade">
-          {/* Header Search Filter Bar */}
-          <div className="catalog-filters-top-pane">
-            <div className="search-input-wrapper-field">
-              <i className="ri-search-line input-icon"></i>
-              <input 
-                type="text" 
-                placeholder="Search by Title, Author, or Department..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && fetchBrowseListings()}
-              />
-              <button className="btn btn-brand" onClick={fetchBrowseListings}>Search</button>
-            </div>
 
-            <div className="filters-dropdowns-row">
-              <select 
-                value={categoryFilter} 
-                onChange={(e) => setCategoryFilter(e.target.value)}
-              >
-                <option value="">All Categories</option>
-                <option value="engineering">Engineering</option>
-                <option value="medical">Medical</option>
-                <option value="school">School Books</option>
-                <option value="competitive_exam">Competitive Exams</option>
-                <option value="novel">Novels & Fiction</option>
-                <option value="other">Others</option>
-              </select>
-
-              <select 
-                value={deptFilter} 
-                onChange={(e) => setDeptFilter(e.target.value)}
-              >
-                <option value="">All Departments</option>
-                <option value="Computer Science">Computer CS</option>
-                <option value="Electronics">Electronics</option>
-                <option value="Mechanical">Mechanical</option>
-                <option value="Civil">Civil</option>
-                <option value="Chemical">Chemical</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Book Catalog Grid */}
-          <div className="vertical-catalog-items-grid">
-            {listings.length > 0 ? (
-              listings.map((book) => (
-                <div className="catalog-book-card-item vertical-style" key={book._id}>
-                  <div className="book-image-cover-box">
-                    <img 
-                      src={book.images?.[0] || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/mock-imagekit-upload-1781805823490.png"} 
-                      alt={book.title} 
-                    />
-                    <span className="book-price-tag">₹{book.price}</span>
-                  </div>
-                  <div className="book-card-details">
-                    <div className="book-top-row">
-                      <h4>{book.title}</h4>
-                      <span className={`condition-indicator-tag ${book.condition}`}>
-                        {book.condition}
-                      </span>
-                    </div>
-                    <p className="book-author">By {book.author || "Unknown Author"}</p>
-                    <p className="book-description-preview">{book.description || "No description provided."}</p>
-                    <div className="college-tag-row">
-                      <i className="ri-map-pin-line"></i>
-                      <span>{book.collegeName}</span>
-                    </div>
-                    <div className="button-group-row">
-                      <button className="btn btn-outline" onClick={() => handleToggleSave(book._id)} title="Bookmark Book">
-                        <i className="ri-bookmark-line"></i>
-                      </button>
-                      <button className="btn btn-brand" onClick={() => handleStartChatFromBook(book)}>
-                        Chat
-                      </button>
-                      {book.status === "active" && (book.seller?._id || book.seller) !== (user?.id || user?._id) && (
-                        <button className="btn btn-brand" style={{ backgroundColor: "var(--color-brand)", color: "var(--color-text-on-brand)", flex: 1 }} onClick={() => navigate(`/checkout/${book._id}`)}>
-                          Buy
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="empty-state-card-box">
-                <i className="ri-search-eye-line"></i>
-                <p>No matching academic books found. Try resetting filters.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* --- 3. BOOK REQUESTS VIEW --- */}
       {activeTab === "requests" && !loading && (

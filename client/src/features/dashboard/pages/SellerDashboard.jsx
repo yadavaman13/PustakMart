@@ -79,6 +79,13 @@ export const SellerDashboard = ({ activeTab }) => {
   const [couponDiscountAmount, setCouponDiscountAmount] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
 
+  // States for Contacting Buyer about request
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [offerListingId, setOfferListingId] = useState("");
+  const [offerMessage, setOfferMessage] = useState("");
+  const [offerSubmitting, setOfferSubmitting] = useState(false);
+
   // Seller earnings state
   const [earningsData, setEarningsData] = useState({
     grossEarnings: 0,
@@ -375,17 +382,54 @@ export const SellerDashboard = ({ activeTab }) => {
 
   // Start chat with requester (seller side)
   const handleContactBuyer = async (request) => {
+    // Check if the seller has any active listings
+    const activeListings = sellerListings.filter(l => l.status === "active");
+    if (activeListings.length === 0) {
+      setError("Please create an active book listing to communicate with this requester.");
+      setTimeout(clearAlerts, 4000);
+      return;
+    }
+
+    setSelectedRequest(request);
+    const defaultListing = activeListings[0];
+    setOfferListingId(defaultListing._id);
+    setOfferMessage(`Hi ${request.requestedBy?.name || "there"}, I noticed you requested the book "${request.title}". I have this active listing "${defaultListing.title}" available. Let's connect!`);
+    setShowContactModal(true);
+  };
+
+  const handleConfirmContact = async (e) => {
+    e.preventDefault();
+    if (!offerListingId || !selectedRequest) return;
     try {
-      setLoading(true);
-      // Initiate a conversation using placeholder book or search listing
-      setError("Please create or use an active book listing to communicate with this requester.");
-      setTimeout(clearAlerts, 3000);
+      setOfferSubmitting(true);
+      const buyerId = selectedRequest.requestedBy?._id || selectedRequest.requestedBy;
+      const res = await createConversationApi(offerListingId, offerMessage, buyerId);
+      
+      if (res.success) {
+        setShowContactModal(false);
+        // Switch to the Messages tab and load chat log
+        setSearchParams({ mode: "seller", tab: "messages" });
+        // Retrieve and highlight chat
+        const targetChat = res.data?.conversation || res.data;
+        await fetchConversations();
+        handleSelectChat(targetChat);
+      }
     } catch (err) {
-      console.error(err);
+      setError("Failed to start conversation: " + (err.response?.data?.message || err.message));
+      setTimeout(clearAlerts, 4000);
     } finally {
-      setLoading(false);
+      setOfferSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    if (showContactModal && selectedRequest && offerListingId) {
+      const selected = sellerListings.find(l => l._id === offerListingId);
+      if (selected) {
+        setOfferMessage(`Hi ${selectedRequest.requestedBy?.name || "there"}, I noticed you requested the book "${selectedRequest.title}". I have this active listing "${selected.title}" available. Let's connect!`);
+      }
+    }
+  }, [offerListingId, showContactModal, selectedRequest, sellerListings]);
 
   // Socket.io Real-Time Event Listener binding
   useEffect(() => {
@@ -1868,6 +1912,82 @@ export const SellerDashboard = ({ activeTab }) => {
               </button>
             </div>
           </form>
+        </div>
+      )}
+      {/* SELECT ACTIVE LISTING OFFER MODAL */}
+      {showContactModal && selectedRequest && (
+        <div className="navbar-search-overlay" style={{ display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 }}>
+          <div className="search-modal" style={{ maxWidth: "500px", width: "90%", padding: "24px", borderRadius: "16px", background: "var(--color-bg-page)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: "700" }}>Contact Requester</h3>
+              <button 
+                type="button" 
+                onClick={() => setShowContactModal(false)}
+                style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "var(--color-text-secondary)" }}
+              >
+                <i className="ri-close-line"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmContact} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div>
+                <p style={{ margin: "0 0 4px 0", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+                  Requester: <strong>{selectedRequest.requestedBy?.name}</strong> ({selectedRequest.collegeName || "SVNIT"})
+                </p>
+                <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+                  Requested Book: <strong>{selectedRequest.title}</strong>
+                </p>
+              </div>
+
+              <div className="form-group-field">
+                <label htmlFor="offer-select">Select Listing to Offer *</label>
+                <select 
+                  id="offer-select"
+                  required
+                  value={offerListingId}
+                  onChange={(e) => setOfferListingId(e.target.value)}
+                  style={{ width: "100%", height: "42px", borderRadius: "8px", border: "1px solid var(--color-border-medium)", padding: "0 12px" }}
+                >
+                  {sellerListings
+                    .filter(l => l.status === "active")
+                    .map(l => (
+                      <option key={l._id} value={l._id}>
+                        {l.title} (₹{l.price})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="form-group-field">
+                <label htmlFor="offer-msg">Message *</label>
+                <textarea 
+                  id="offer-msg"
+                  required
+                  rows={4}
+                  value={offerMessage}
+                  onChange={(e) => setOfferMessage(e.target.value)}
+                  style={{ width: "100%", borderRadius: "8px", border: "1px solid var(--color-border-medium)", padding: "12px", fontFamily: "inherit", fontSize: "0.9rem" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "8px" }}>
+                <button 
+                  type="button" 
+                  className="btn btn-outline" 
+                  onClick={() => setShowContactModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-brand" 
+                  disabled={offerSubmitting}
+                >
+                  {offerSubmitting ? "Connecting..." : "Send Offer"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

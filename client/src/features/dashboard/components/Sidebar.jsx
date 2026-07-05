@@ -69,12 +69,7 @@ export const Sidebar = ({
                   active={activeTab === "home"} 
                   onClick={() => handleTabClick("home")} 
                 />
-                <SidebarItem 
-                  label="Browse Books" 
-                  icon="ri-search-2-line" 
-                  active={activeTab === "browse"} 
-                  onClick={() => handleTabClick("browse")} 
-                />
+
                 <SidebarItem 
                   label="Book Requests" 
                   icon="ri-book-open-line" 

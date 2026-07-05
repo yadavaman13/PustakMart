@@ -1287,7 +1287,7 @@
 /* 5.3 Book Catalog Grid Card style */
 .horizontal-listings-grid, .vertical-catalog-items-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: $space-5;
   margin-top: $space-4;
 }
@@ -1308,14 +1308,18 @@
 
   .book-image-cover-box {
     position: relative;
-    height: 180px;
+    height: 270px;
     background-color: var(--color-bg-surface-2);
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
+      padding: $space-1;
     }
 
     .book-price-tag {
@@ -1506,14 +1510,16 @@
       margin-top: -3px;
     }
 
-    input[type="text"], input[type="number"], textarea, select {
+    input[type="text"], input[type="number"], select {
       background-color: var(--color-bg-page);
       border: 1px solid var(--color-border-medium);
       border-radius: $radius-md;
-      padding: $space-3;
+      padding: 0 $space-3;
       font-size: $text-sm;
       color: var(--color-text-primary);
       width: 100%;
+      height: 42px;
+      font-family: inherit;
       
       &:focus {
         border-color: var(--color-brand);
@@ -1522,8 +1528,21 @@
     }
 
     textarea {
+      background-color: var(--color-bg-page);
+      border: 1px solid var(--color-border-medium);
+      border-radius: $radius-md;
+      padding: $space-3;
+      font-size: $text-sm;
+      color: var(--color-text-primary);
+      width: 100%;
       height: 100px;
       resize: vertical;
+      font-family: inherit;
+      
+      &:focus {
+        border-color: var(--color-brand);
+        box-shadow: $shadow-focus;
+      }
     }
   }
 
@@ -2600,6 +2619,7 @@
   }
 
   input, select, textarea {
+    font-family: inherit;
     height: 38px;
     padding: 0 $space-3;
     border-radius: $radius-md;
