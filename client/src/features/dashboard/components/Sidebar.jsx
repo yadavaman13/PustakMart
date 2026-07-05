@@ -179,6 +179,17 @@ export const Sidebar = ({
                 />
               </div>
 
+              {/* Finance Group */}
+              <div className="nav-group">
+                <span className="nav-group-title">Finance</span>
+                <SidebarItem 
+                  label="Payouts & Ledger" 
+                  icon="ri-wallet-3-line" 
+                  active={activeTab === "payouts"} 
+                  onClick={() => handleTabClick("payouts")} 
+                />
+              </div>
+
               {/* Seller Settings Group */}
               <div className="nav-group">
                 <span className="nav-group-title">Seller</span>

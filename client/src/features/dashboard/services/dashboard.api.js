@@ -166,3 +166,30 @@ export const getSellerEarningsApi = async () => {
   const response = await api.get("/seller/earnings");
   return response.data;
 };
+
+// 11. Payouts & Withdrawals API
+export const getSellerPayoutDetailsApi = async () => {
+  const response = await api.get("/seller/payout");
+  return response.data;
+};
+
+export const updateSellerPayoutDetailsApi = async (data) => {
+  const response = await api.post("/seller/payout", data);
+  return response.data;
+};
+
+export const requestSellerWithdrawalApi = async (data) => {
+  const response = await api.post("/seller/withdrawals", data);
+  return response.data;
+};
+
+export const getSellerWithdrawalsApi = async (params = {}) => {
+  const response = await api.get("/seller/withdrawals", { params });
+  return response.data;
+};
+
+export const getSellerTransactionsApi = async (params = {}) => {
+  const response = await api.get("/seller/transactions", { params });
+  return response.data;
+};
+

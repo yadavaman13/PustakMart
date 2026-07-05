@@ -8,6 +8,7 @@ const DashboardIcon = () => <i className="ri-dashboard-line"></i>;
 const UsersIcon = () => <i className="ri-group-line"></i>;
 const BooksIcon = () => <i className="ri-book-3-line"></i>;
 const ReportsIcon = () => <i className="ri-flag-line"></i>;
+const PayoutIcon = () => <i className="ri-wallet-3-line"></i>;
 const LogoutIcon = () => <i className="ri-logout-box-line"></i>;
 
 export default function AdminDashboardPage() {
@@ -18,6 +19,7 @@ export default function AdminDashboardPage() {
     pendingSellers,
     listings,
     reports,
+    withdrawals,
     loading,
     error,
     success,
@@ -25,13 +27,40 @@ export default function AdminDashboardPage() {
     verifySeller,
     updateUserStatus,
     resolveReport,
+    approveWithdrawal,
+    rejectWithdrawal,
+    processWithdrawal,
+    completeWithdrawal,
     fetchAllData,
   } = useAdmin();
 
-  // Active view: 'overview' | 'users' | 'listings' | 'reports'
+  // Active view: 'overview' | 'users' | 'listings' | 'reports' | 'payout-requests'
   const [activeTab, setActiveTab] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  
+  // Withdrawal request modal review state
+  const [reviewWithdrawal, setReviewWithdrawal] = useState(null);
+  const [rejectionRemark, setRejectionRemark] = useState("");
+  const [transactionReference, setTransactionReference] = useState("");
+  const [payoutStatusFilter, setPayoutStatusFilter] = useState("all");
+
+  const pendingRequestsCount = withdrawals.filter((w) => w.status === "pending").length;
+  const completedTodayCount = withdrawals.filter((w) => {
+    if (w.status !== "completed") return false;
+    const completedDate = new Date(w.processedAt || w.updatedAt);
+    const today = new Date();
+    return (
+      completedDate.getDate() === today.getDate() &&
+      completedDate.getMonth() === today.getMonth() &&
+      completedDate.getFullYear() === today.getFullYear()
+    );
+  }).length;
+  const totalCompletedWithdrawalsCount = withdrawals.filter((w) => w.status === "completed").length;
+  const totalPayoutValue = withdrawals
+    .filter((w) => w.status === "completed")
+    .reduce((sum, w) => sum + w.amount, 0);
+
   
   // Selected user application for verification modal review
   const [reviewSeller, setReviewSeller] = useState(null);
@@ -74,6 +103,29 @@ export default function AdminDashboardPage() {
     r.reason?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (r.listing?.title && r.listing.title.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const filteredWithdrawals = withdrawals.filter((w) => {
+    const matchQuery = searchQuery ? (
+      (w.seller?.name && w.seller.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (w.seller?.email && w.seller.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (w.seller?.collegeName && w.seller.collegeName.toLowerCase().includes(searchQuery.toLowerCase()))
+    ) : true;
+
+    const matchStatus = payoutStatusFilter !== "all" ? w.status === payoutStatusFilter : true;
+    return matchQuery && matchStatus;
+  });
+
+  const handleOpenWithdrawalModal = (item) => {
+    setRejectionRemark("");
+    setTransactionReference("");
+    setReviewWithdrawal(item);
+  };
+
+  const handleCloseWithdrawalModal = () => {
+    setRejectionRemark("");
+    setTransactionReference("");
+    setReviewWithdrawal(null);
+  };
 
   // Trigger verify calls and close modal
   const handleVerifySellerAction = async (id, status) => {
@@ -156,6 +208,19 @@ export default function AdminDashboardPage() {
             {reports.filter(r => r.status === "pending").length > 0 && (
               <span className="error-indicator-pill">
                 {reports.filter(r => r.status === "pending").length}
+              </span>
+            )}
+          </button>
+
+          <button 
+            className={`menu-item ${activeTab === "payout-requests" ? "active" : ""}`}
+            onClick={() => handleTabChange("payout-requests")}
+          >
+            <PayoutIcon />
+            <span>Payout Requests</span>
+            {withdrawals.filter(w => w.status === "pending").length > 0 && (
+              <span className="pending-indicator-pill" style={{ backgroundColor: "#E28743", marginLeft: "auto" }}>
+                {withdrawals.filter(w => w.status === "pending").length}
               </span>
             )}
           </button>
@@ -638,6 +703,127 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
+          {/* TAB 5: PAYOUT REQUESTS PANEL */}
+          {activeTab === "payout-requests" && (
+            <div className="payout-requests-tab">
+              <div className="tab-title-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "16px" }}>
+                <div>
+                  <h1>Payout & Withdrawal Requests</h1>
+                  <p>Review and complete seller withdrawal requests manually.</p>
+                </div>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  {["all", "pending", "approved", "processing", "completed", "rejected"].map((status) => (
+                    <button 
+                      key={status}
+                      className={`btn-table ${payoutStatusFilter === status ? "btn-unblock" : "btn-delete"}`}
+                      onClick={() => setPayoutStatusFilter(status)}
+                      style={{ textTransform: "capitalize", padding: "6px 12px", border: "1px solid var(--color-border-medium)", borderRadius: "6px" }}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Payout statistics summary cards */}
+              <div className="analytics-card-grid" style={{ marginBottom: "24px" }}>
+                <div className="analytics-card">
+                  <div className="card-top">
+                    <span className="card-lbl">Pending Requests</span>
+                    <span className="card-badge bg-gold" style={{ textTransform: "uppercase" }}>Pending</span>
+                  </div>
+                  <h3>{pendingRequestsCount}</h3>
+                  <p className="card-trend">Needs review / approval</p>
+                </div>
+                <div className="analytics-card">
+                  <div className="card-top">
+                    <span className="card-lbl">Completed Today</span>
+                    <span className="card-badge bg-green" style={{ textTransform: "uppercase" }}>Completed</span>
+                  </div>
+                  <h3>{completedTodayCount}</h3>
+                  <p className="card-trend">Settled within 24 hours</p>
+                </div>
+                <div className="analytics-card">
+                  <div className="card-top">
+                    <span className="card-lbl">Total Completed Requests</span>
+                    <span className="card-badge bg-blue" style={{ textTransform: "uppercase" }}>Total</span>
+                  </div>
+                  <h3>{totalCompletedWithdrawalsCount}</h3>
+                  <p className="card-trend">Successful transfers</p>
+                </div>
+                <div className="analytics-card">
+                  <div className="card-top">
+                    <span className="card-lbl">Total Payout Value</span>
+                    <span className="card-badge bg-green" style={{ textTransform: "uppercase" }}>Value</span>
+                  </div>
+                  <h3>₹{totalPayoutValue}</h3>
+                  <p className="card-trend">All-time settled funds</p>
+                </div>
+              </div>
+
+              {/* Table of Requests */}
+              <div className="admin-data-card card-block">
+                <div className="block-body">
+                  <table className="admin-data-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid var(--color-border-default)", textAlign: "left" }}>
+                        <th style={{ padding: "12px 8px" }}>Seller</th>
+                        <th style={{ padding: "12px 8px" }}>College</th>
+                        <th style={{ padding: "12px 8px" }}>Amount</th>
+                        <th style={{ padding: "12px 8px" }}>Method</th>
+                        <th style={{ padding: "12px 8px" }}>Requested On</th>
+                        <th style={{ padding: "12px 8px" }}>Status</th>
+                        <th style={{ padding: "12px 8px" }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredWithdrawals.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" style={{ padding: "24px", textAlign: "center", color: "var(--color-text-secondary)" }}>
+                            No payout requests found matching filters.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredWithdrawals.map((wr) => (
+                          <tr key={wr._id} style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
+                            <td style={{ padding: "12px 8px" }}>
+                              <div className="user-profile-info" style={{ display: "flex", flexDirection: "column" }}>
+                                <span style={{ fontWeight: "600" }}>{wr.seller?.name || "Deleted User"}</span>
+                                <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>{wr.seller?.email}</span>
+                              </div>
+                            </td>
+                            <td style={{ padding: "12px 8px" }}>{wr.seller?.collegeName || "SVNIT"}</td>
+                            <td style={{ padding: "12px 8px", fontWeight: "600" }}>₹{wr.amount}</td>
+                            <td style={{ padding: "12px 8px", textTransform: "uppercase" }}>{wr.payoutMethod}</td>
+                            <td style={{ padding: "12px 8px" }}>{new Date(wr.requestedAt).toLocaleDateString()}</td>
+                            <td style={{ padding: "12px 8px" }}>
+                              <span className={`badge-pill ${
+                                wr.status === "pending" ? "bg-gold" : 
+                                wr.status === "completed" ? "bg-green" : 
+                                wr.status === "rejected" ? "bg-red" : "bg-grey"
+                              }`} style={{ fontSize: "10px", padding: "4px 8px", borderRadius: "12px", color: "#fff", fontWeight: "bold" }}>
+                                {wr.status.toUpperCase()}
+                              </span>
+                            </td>
+                            <td style={{ padding: "12px 8px" }}>
+                              <button 
+                                className="btn-table btn-unblock"
+                                onClick={() => handleOpenWithdrawalModal(wr)}
+                                style={{ padding: "6px 12px", fontSize: "0.75rem", borderRadius: "4px" }}
+                              >
+                                View Details & Action
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
         </main>
       </div>
 
@@ -755,6 +941,158 @@ export default function AdminDashboardPage() {
               >
                 Approve Seller Status
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. MODAL DIALOG OVERLAY: WITHDRAWAL REQUEST ACTION REVIEW */}
+      {reviewWithdrawal && (
+        <div className="admin-modal-backdrop" onClick={handleCloseWithdrawalModal}>
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()} style={{ width: "500px" }}>
+            <div className="modal-header">
+              <h3>Action Payout Withdrawal Request</h3>
+              <button className="btn-close" onClick={handleCloseWithdrawalModal}>×</button>
+            </div>
+            
+            <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              
+              {/* Seller Information */}
+              <div className="student-profile-summary" style={{ borderBottom: "1px solid var(--color-border-subtle)", paddingBottom: "12px" }}>
+                <h4 style={{ margin: "0 0 10px 0", fontSize: "1rem", fontWeight: "700" }}>Seller Information</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "0.85rem" }}>
+                  <div><strong>Name:</strong> {reviewWithdrawal.seller?.name || "Deleted User"}</div>
+                  <div><strong>Email:</strong> {reviewWithdrawal.seller?.email}</div>
+                  <div><strong>Mobile:</strong> {reviewWithdrawal.seller?.mobileNumber || "N/A"}</div>
+                  <div><strong>College:</strong> {reviewWithdrawal.seller?.collegeName || "SVNIT"}</div>
+                </div>
+              </div>
+
+              {/* Financial Context */}
+              <div style={{ borderBottom: "1px solid var(--color-border-subtle)", paddingBottom: "12px" }}>
+                <h4 style={{ margin: "0 0 10px 0", fontSize: "1rem", fontWeight: "700" }}>Financial Context</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "0.85rem" }}>
+                  <div><strong>Requested Amount:</strong> <span style={{ color: "var(--color-brand)", fontWeight: "700" }}>₹{reviewWithdrawal.amount}</span></div>
+                  <div><strong>Payout Method:</strong> <span style={{ textTransform: "uppercase", fontWeight: "600" }}>{reviewWithdrawal.payoutMethod}</span></div>
+                </div>
+              </div>
+
+              {/* Payout Information Snap */}
+              <div style={{ padding: "12px", borderRadius: "6px", backgroundColor: "var(--color-bg-surface-2)", border: "1px solid var(--color-border-subtle)" }}>
+                <h4 style={{ margin: "0 0 10px 0", fontSize: "0.9rem", fontWeight: "600" }}>Snapshot Credentials</h4>
+                {reviewWithdrawal.payoutMethod === "upi" ? (
+                  <div style={{ fontSize: "0.85rem" }}>
+                    <strong>UPI ID:</strong> <code>{reviewWithdrawal.payoutDetailsSnapshot?.upiId}</code>
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "0.85rem" }}>
+                    <div><strong>Holder Name:</strong> {reviewWithdrawal.payoutDetailsSnapshot?.accountHolderName}</div>
+                    <div><strong>Bank Name:</strong> {reviewWithdrawal.payoutDetailsSnapshot?.bankName}</div>
+                    <div><strong>Account No:</strong> {reviewWithdrawal.payoutDetailsSnapshot?.accountNumber}</div>
+                    <div><strong>IFSC Code:</strong> {reviewWithdrawal.payoutDetailsSnapshot?.ifscCode}</div>
+                    <div style={{ gridColumn: "span 2" }}><strong>Branch:</strong> {reviewWithdrawal.payoutDetailsSnapshot?.branchName}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Workflow Status State controls */}
+              <div style={{ fontSize: "0.85rem" }}>
+                <strong>Current Status:</strong> <span className={`badge status-pill ${reviewWithdrawal.status}`} style={{ textTransform: "uppercase", padding: "4px 8px", borderRadius: "4px", fontSize: "10px" }}>{reviewWithdrawal.status}</span>
+              </div>
+
+              {/* Action Fields: complete inputs */}
+              {reviewWithdrawal.status === "processing" && (
+                <div className="admin-comment-group" style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label htmlFor="tx-ref"><strong>Transaction Reference ID *</strong></label>
+                  <input 
+                    id="tx-ref"
+                    type="text" 
+                    className="form-control" 
+                    placeholder="Enter offline wire reference code"
+                    value={transactionReference}
+                    required
+                    onChange={(e) => setTransactionReference(e.target.value)}
+                    style={{ width: "100%", height: "38px", padding: "0 8px", borderRadius: "6px", border: "1px solid var(--color-border-medium)" }}
+                  />
+                </div>
+              )}
+
+              {reviewWithdrawal.status === "pending" && (
+                <div className="admin-comment-group" style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label htmlFor="reject-remark"><strong>Rejection Remark / remarks</strong></label>
+                  <textarea 
+                    id="reject-remark"
+                    placeholder="Provide a reason for rejection (required only if rejecting)"
+                    value={rejectionRemark}
+                    onChange={(e) => setRejectionRemark(e.target.value)}
+                    style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--color-border-medium)", fontFamily: "inherit" }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer" style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "16px" }}>
+              <button className="btn-modal btn-cancel" onClick={handleCloseWithdrawalModal} style={{ padding: "8px 16px", borderRadius: "6px", border: "1px solid var(--color-border-medium)", background: "transparent" }}>
+                Cancel
+              </button>
+
+              {reviewWithdrawal.status === "pending" && (
+                <>
+                  <button 
+                    className="btn-modal btn-reject"
+                    disabled={loading}
+                    onClick={async () => {
+                      if (!rejectionRemark.trim()) {
+                        alert("Please provide a rejection remark.");
+                        return;
+                      }
+                      const ok = await rejectWithdrawal(reviewWithdrawal._id, rejectionRemark);
+                      if (ok.success) handleCloseWithdrawalModal();
+                    }}
+                  >
+                    Reject Request
+                  </button>
+                  <button 
+                    className="btn-modal btn-approve"
+                    disabled={loading}
+                    onClick={async () => {
+                      const ok = await approveWithdrawal(reviewWithdrawal._id);
+                      if (ok.success) handleCloseWithdrawalModal();
+                    }}
+                    style={{ backgroundColor: "#34A853", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "6px" }}
+                  >
+                    Approve Request
+                  </button>
+                </>
+              )}
+
+              {reviewWithdrawal.status === "approved" && (
+                <button 
+                  className="btn-modal btn-approve"
+                  disabled={loading}
+                  onClick={async () => {
+                    const ok = await processWithdrawal(reviewWithdrawal._id);
+                    if (ok.success) handleCloseWithdrawalModal();
+                  }}
+                  style={{ backgroundColor: "var(--color-brand)", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "6px" }}
+                >
+                  Mark Processing
+                </button>
+              )}
+
+              {reviewWithdrawal.status === "processing" && (
+                <button 
+                  className="btn-modal btn-approve"
+                  disabled={loading || !transactionReference.trim()}
+                  onClick={async () => {
+                    const ok = await completeWithdrawal(reviewWithdrawal._id, transactionReference);
+                    if (ok.success) handleCloseWithdrawalModal();
+                  }}
+                  style={{ backgroundColor: "#34A853", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "6px" }}
+                >
+                  Mark Completed
+                </button>
+              )}
             </div>
           </div>
         </div>

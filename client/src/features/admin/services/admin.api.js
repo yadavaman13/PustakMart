@@ -75,3 +75,37 @@ export const resolveReportApi = async (id, status) => {
   const response = await api.patch(`/admin/reports/${id}`, { status });
   return response.data;
 };
+
+/**
+ * Admin Withdrawals & Payouts API
+ */
+export const getAdminWithdrawalsApi = async (params = {}) => {
+  const response = await api.get("/admin/withdrawals", { params });
+  return response.data;
+};
+
+export const getAdminWithdrawalDetailsApi = async (id) => {
+  const response = await api.get(`/admin/withdrawals/${id}`);
+  return response.data;
+};
+
+export const approveWithdrawalApi = async (id) => {
+  const response = await api.patch(`/admin/withdrawals/${id}/approve`);
+  return response.data;
+};
+
+export const rejectWithdrawalApi = async (id, data) => {
+  const response = await api.patch(`/admin/withdrawals/${id}/reject`, data);
+  return response.data;
+};
+
+export const processingWithdrawalApi = async (id) => {
+  const response = await api.patch(`/admin/withdrawals/${id}/processing`);
+  return response.data;
+};
+
+export const completeWithdrawalApi = async (id, data) => {
+  const response = await api.patch(`/admin/withdrawals/${id}/complete`, data);
+  return response.data;
+};
+

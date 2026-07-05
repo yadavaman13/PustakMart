@@ -7,7 +7,13 @@ import {
   updateUserStatusApi,
   getAdminListingsApi,
   getAdminReportsApi,
-  resolveReportApi
+  resolveReportApi,
+  getAdminWithdrawalsApi,
+  getAdminWithdrawalDetailsApi,
+  approveWithdrawalApi,
+  rejectWithdrawalApi,
+  processingWithdrawalApi,
+  completeWithdrawalApi
 } from "../services/admin.api.js";
 
 export function useAdmin() {
@@ -16,6 +22,7 @@ export function useAdmin() {
   const [pendingSellers, setPendingSellers] = useState([]);
   const [listings, setListings] = useState([]);
   const [reports, setReports] = useState([]);
+  const [withdrawals, setWithdrawals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -171,6 +178,106 @@ export function useAdmin() {
     }
   }, [fetchReports, fetchListings, fetchAnalytics]);
 
+  const fetchWithdrawals = useCallback(async (params = {}) => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await getAdminWithdrawalsApi(params);
+      if (res.success) {
+        setWithdrawals(res.withdrawals || []);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || "Failed to load withdrawal requests.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const approveWithdrawal = useCallback(async (id) => {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await approveWithdrawalApi(id);
+      if (res.success) {
+        setSuccess("Withdrawal request approved successfully.");
+        await fetchWithdrawals();
+        await fetchAnalytics();
+        return { success: true };
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || "Failed to approve withdrawal request.");
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchWithdrawals, fetchAnalytics]);
+
+  const rejectWithdrawal = useCallback(async (id, remark) => {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await rejectWithdrawalApi(id, remark);
+      if (res.success) {
+        setSuccess("Withdrawal request rejected successfully.");
+        await fetchWithdrawals();
+        await fetchAnalytics();
+        return { success: true };
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || "Failed to reject withdrawal request.");
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchWithdrawals, fetchAnalytics]);
+
+  const processWithdrawal = useCallback(async (id) => {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await processingWithdrawalApi(id);
+      if (res.success) {
+        setSuccess("Withdrawal request status updated to processing.");
+        await fetchWithdrawals();
+        await fetchAnalytics();
+        return { success: true };
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || "Failed to mark withdrawal request as processing.");
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchWithdrawals, fetchAnalytics]);
+
+  const completeWithdrawal = useCallback(async (id, transactionReference) => {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await completeWithdrawalApi(id, transactionReference);
+      if (res.success) {
+        setSuccess("Withdrawal request completed successfully.");
+        await fetchWithdrawals();
+        await fetchAnalytics();
+        return { success: true };
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || "Failed to complete withdrawal request.");
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchWithdrawals, fetchAnalytics]);
+
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -181,6 +288,7 @@ export function useAdmin() {
         fetchPendingSellers(),
         fetchListings(),
         fetchReports(),
+        fetchWithdrawals(),
       ]);
     } catch (err) {
       console.error("Error fetching all data:", err);
@@ -188,7 +296,7 @@ export function useAdmin() {
     } finally {
       setLoading(false);
     }
-  }, [fetchAnalytics, fetchUsers, fetchPendingSellers, fetchListings, fetchReports]);
+  }, [fetchAnalytics, fetchUsers, fetchPendingSellers, fetchListings, fetchReports, fetchWithdrawals]);
 
   return {
     analytics,
@@ -196,6 +304,7 @@ export function useAdmin() {
     pendingSellers,
     listings,
     reports,
+    withdrawals,
     loading,
     error,
     success,
@@ -205,9 +314,14 @@ export function useAdmin() {
     fetchPendingSellers,
     fetchListings,
     fetchReports,
+    fetchWithdrawals,
     verifySeller,
     updateUserStatus,
     resolveReport,
+    approveWithdrawal,
+    rejectWithdrawal,
+    processWithdrawal,
+    completeWithdrawal,
     fetchAllData,
   };
 }

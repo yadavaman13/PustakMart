@@ -17,7 +17,12 @@ import {
   acceptConversationApi,
   rejectConversationApi,
   generateCouponApi,
-  getSellerEarningsApi
+  getSellerEarningsApi,
+  getSellerPayoutDetailsApi,
+  updateSellerPayoutDetailsApi,
+  requestSellerWithdrawalApi,
+  getSellerWithdrawalsApi,
+  getSellerTransactionsApi
 } from "../services/dashboard.api.js";
 import { useSocket } from "../../shared/context/SocketContext.jsx";
 import axios from "axios";
@@ -95,6 +100,50 @@ export const SellerDashboard = ({ activeTab }) => {
     monthlyAnalytics: []
   });
 
+  // Payout profile & withdrawals states
+  const [payoutProfile, setPayoutProfile] = useState(null);
+  const [payoutFinancials, setPayoutFinancials] = useState({
+    grossEarnings: 0,
+    commission: 0,
+    netEarnings: 0,
+    pendingWithdrawals: 0,
+    totalWithdrawn: 0,
+    availableBalance: 0
+  });
+  
+  // Ledger / unified transactions states
+  const [transactions, setTransactions] = useState([]);
+  const [transactionsPage, setTransactionsPage] = useState(1);
+  const [hasMoreTransactions, setHasMoreTransactions] = useState(false);
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState("all"); // "all", "credit", "debit"
+  
+  // Withdrawal requests tracking states
+  const [withdrawalRequests, setWithdrawalRequests] = useState([]);
+  const [withdrawalFilter, setWithdrawalFilter] = useState("all"); // "all", "pending", "completed", "rejected"
+  const [withdrawalPage, setWithdrawalPage] = useState(1);
+  const [hasMoreWithdrawals, setHasMoreWithdrawals] = useState(false);
+
+  // Active tooltip state for info buttons
+  const [activeTooltip, setActiveTooltip] = useState(null);
+
+  // Modals state
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showPayoutSetupModal, setShowPayoutSetupModal] = useState(false);
+
+  // Payout setup form state
+  const [preferredMethod, setPreferredMethod] = useState("upi");
+  const [upiId, setUpiId] = useState("");
+  const [accountHolderName, setAccountHolderName] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [confirmAccountNumber, setConfirmAccountNumber] = useState("");
+  const [ifscCode, setIfscCode] = useState("");
+  const [branchName, setBranchName] = useState("");
+
+  // Withdrawal form state
+  const [withdrawalAmount, setWithdrawalAmount] = useState("");
+  const [withdrawalMethod, setWithdrawalMethod] = useState("upi");
+
   const clearAlerts = () => {
     setError(null);
     setSuccess(null);
@@ -112,10 +161,172 @@ export const SellerDashboard = ({ activeTab }) => {
       fetchSellerReviews();
     } else if (activeTab === "messages") {
       fetchConversations();
+    } else if (activeTab === "payouts") {
+      fetchPayoutData();
     }
-  }, [activeTab]);
+  }, [activeTab, transactionTypeFilter, withdrawalFilter]);
 
   // --- API Fetchers ---
+
+  const fetchPayoutData = async () => {
+    try {
+      setLoading(true);
+      clearAlerts();
+
+      // 1. Fetch payout profile and dynamic financials
+      const res = await getSellerPayoutDetailsApi();
+      if (res.success) {
+        setPayoutProfile(res.payoutProfile);
+        setPayoutFinancials({
+          grossEarnings: res.grossEarnings || 0,
+          commission: res.commission || 0,
+          netEarnings: res.netEarnings || 0,
+          pendingWithdrawals: res.pendingWithdrawals || 0,
+          totalWithdrawn: res.totalWithdrawn || 0,
+          availableBalance: res.availableBalance || 0
+        });
+
+        // Autofill setup form if profile exists
+        if (res.payoutProfile) {
+          setPreferredMethod(res.payoutProfile.preferredMethod || "upi");
+          setUpiId(res.payoutProfile.upi?.upiId || "");
+          setAccountHolderName(res.payoutProfile.bank?.accountHolderName || "");
+          setBankName(res.payoutProfile.bank?.bankName || "");
+          setAccountNumber(res.payoutProfile.bank?.accountNumber || "");
+          setConfirmAccountNumber(res.payoutProfile.bank?.accountNumber || "");
+          setIfscCode(res.payoutProfile.bank?.ifscCode || "");
+          setBranchName(res.payoutProfile.bank?.branchName || "");
+
+          setWithdrawalMethod(res.payoutProfile.preferredMethod || "upi");
+        }
+      }
+
+
+
+      // 3. Fetch withdrawal requests
+      setWithdrawalPage(1);
+      const wrRes = await getSellerWithdrawalsApi({ page: 1, limit: 5, status: withdrawalFilter });
+      if (wrRes.success) {
+        setWithdrawalRequests(wrRes.withdrawals || []);
+        setHasMoreWithdrawals(wrRes.hasMore);
+      }
+
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || "Failed to load payout configurations.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMoreTransactions = async () => {
+    try {
+      const nextPage = transactionsPage + 1;
+      const txRes = await getSellerTransactionsApi({ page: nextPage, limit: 5, type: transactionTypeFilter });
+      if (txRes.success) {
+        setTransactions(prev => [...prev, ...(txRes.transactions || [])]);
+        setTransactionsPage(nextPage);
+        setHasMoreTransactions(txRes.hasMore);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to load more transactions.", "error");
+    }
+  };
+
+  const loadMoreWithdrawals = async () => {
+    try {
+      const nextPage = withdrawalPage + 1;
+      const wrRes = await getSellerWithdrawalsApi({ page: nextPage, limit: 5, status: withdrawalFilter });
+      if (wrRes.success) {
+        setWithdrawalRequests(prev => [...prev, ...(wrRes.withdrawals || [])]);
+        setWithdrawalPage(nextPage);
+        setHasMoreWithdrawals(wrRes.hasMore);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to load more withdrawal history.", "error");
+    }
+  };
+
+  const handleSetupPayoutSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      clearAlerts();
+
+      // Basic Bank validations
+      if (preferredMethod === "bank" && accountNumber !== confirmAccountNumber) {
+        showToast("Bank account numbers do not match.", "error");
+        setLoading(false);
+        return;
+      }
+
+      const body = {
+        preferredMethod,
+        upi: preferredMethod === "upi" ? { upiId } : undefined,
+        bank: preferredMethod === "bank" ? {
+          accountHolderName,
+          bankName,
+          accountNumber,
+          confirmAccountNumber,
+          ifscCode,
+          branchName
+        } : undefined
+      };
+
+      const res = await updateSellerPayoutDetailsApi(body);
+      if (res.success) {
+        showToast("Payout setup details successfully updated!", "success");
+        setPayoutProfile(res.payoutProfile);
+        setShowPayoutSetupModal(false);
+        fetchPayoutData();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || "Failed to update payout configuration details.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRequestWithdrawalSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      clearAlerts();
+
+      const amt = Number(withdrawalAmount);
+      if (isNaN(amt) || amt < 300) {
+        showToast("Minimum withdrawal amount is ₹300.", "error");
+        setLoading(false);
+        return;
+      }
+
+      if (amt > payoutFinancials.availableBalance) {
+        showToast(`Cannot request more than your available balance (₹${payoutFinancials.availableBalance}).`, "error");
+        setLoading(false);
+        return;
+      }
+
+      const res = await requestSellerWithdrawalApi({
+        amount: amt,
+        payoutMethod: withdrawalMethod
+      });
+
+      if (res.success) {
+        showToast("Withdrawal request submitted successfully!", "success");
+        setWithdrawalAmount("");
+        setShowWithdrawModal(false);
+        fetchPayoutData();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || "Failed to submit withdrawal request.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchOverviewData = async () => {
     try {
@@ -147,6 +358,16 @@ export const SellerDashboard = ({ activeTab }) => {
           booksSold: earningsRes.booksSold || 0,
           monthlyAnalytics: earningsRes.monthlyAnalytics || []
         });
+      }
+
+      // Fetch Transactions log when in Sales Analytics tab
+      if (activeTab === "sales-analytics") {
+        setTransactionsPage(1);
+        const txRes = await getSellerTransactionsApi({ page: 1, limit: 5, type: transactionTypeFilter });
+        if (txRes.success) {
+          setTransactions(txRes.transactions || []);
+          setHasMoreTransactions(txRes.hasMore);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -1225,37 +1446,141 @@ export const SellerDashboard = ({ activeTab }) => {
 
       {/* --- 5. SALES ANALYTICS VIEW --- */}
       {activeTab === "sales-analytics" && !loading && (
-        <div className="tab-view-container sales-analytics-view animate-fade">
-          <div className="grid-summary-metric-cards">
-            <div className="metric-box-card">
-              <div className="card-icon-circle seller-color"><i className="ri-money-dollar-box-line"></i></div>
+        <div className="tab-view-container sales-analytics-view animate-fade" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <div className="grid-summary-metric-cards" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
+            <div className="metric-box-card" style={{ position: "relative", backgroundColor: "var(--color-bg-surface)", border: "1px solid var(--color-border-default)", borderRadius: "12px", padding: "16px 20px" }}>
+              <div 
+                style={{ position: "absolute", top: "12px", right: "12px", cursor: "pointer" }}
+                onMouseEnter={() => setActiveTooltip("gross")}
+                onMouseLeave={() => setActiveTooltip(null)}
+              >
+                <i className="ri-information-line" style={{ color: "var(--color-text-tertiary)", fontSize: "14px" }}></i>
+                {activeTooltip === "gross" && (
+                  <div style={{
+                    position: "absolute",
+                    top: "20px",
+                    right: "0",
+                    backgroundColor: "var(--color-text-primary)",
+                    color: "var(--color-text-inverse)",
+                    padding: "6px 10px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    width: "180px",
+                    boxShadow: "var(--shadow-sm)",
+                    zIndex: 100,
+                    lineHeight: "1.3",
+                    fontWeight: "normal"
+                  }}>
+                    Total revenue generated from all sold book listings before platform commission deductions.
+                  </div>
+                )}
+              </div>
+              <div className="card-icon-circle seller-color" style={{ backgroundColor: "rgba(52, 168, 83, 0.1)", color: "#34A853" }}><i className="ri-money-dollar-box-line"></i></div>
               <div className="card-numeric-info">
-                <h3>₹{(earningsData.grossEarnings || 0).toLocaleString()}</h3>
-                <p>Gross Earnings</p>
+                <h3 style={{ fontSize: "1.6rem", fontWeight: "700" }}>₹{(earningsData.grossEarnings || 0).toLocaleString()}</h3>
+                <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>Gross Earnings</p>
               </div>
             </div>
 
-            <div className="metric-box-card">
-              <div className="card-icon-circle seller-color"><i className="ri-percent-line"></i></div>
+            <div className="metric-box-card" style={{ position: "relative", backgroundColor: "var(--color-bg-surface)", border: "1px solid var(--color-border-default)", borderRadius: "12px", padding: "16px 20px" }}>
+              <div 
+                style={{ position: "absolute", top: "12px", right: "12px", cursor: "pointer" }}
+                onMouseEnter={() => setActiveTooltip("commission")}
+                onMouseLeave={() => setActiveTooltip(null)}
+              >
+                <i className="ri-information-line" style={{ color: "var(--color-text-tertiary)", fontSize: "14px" }}></i>
+                {activeTooltip === "commission" && (
+                  <div style={{
+                    position: "absolute",
+                    top: "20px",
+                    right: "0",
+                    backgroundColor: "var(--color-text-primary)",
+                    color: "var(--color-text-inverse)",
+                    padding: "6px 10px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    width: "180px",
+                    boxShadow: "var(--shadow-sm)",
+                    zIndex: 100,
+                    lineHeight: "1.3",
+                    fontWeight: "normal"
+                  }}>
+                    10% service fee deducted by PustakMart to support the platform services.
+                  </div>
+                )}
+              </div>
+              <div className="card-icon-circle seller-color" style={{ backgroundColor: "rgba(234, 67, 53, 0.1)", color: "#EA4335" }}><i className="ri-percent-line"></i></div>
               <div className="card-numeric-info">
-                <h3>₹{(earningsData.commission || 0).toLocaleString()}</h3>
-                <p>Platform Commission (10%)</p>
+                <h3 style={{ fontSize: "1.6rem", fontWeight: "700" }}>₹{(earningsData.commission || 0).toLocaleString()}</h3>
+                <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>Platform Commission (10%)</p>
               </div>
             </div>
 
-            <div className="metric-box-card">
-              <div className="card-icon-circle seller-color"><i className="ri-wallet-3-line"></i></div>
+            <div className="metric-box-card" style={{ position: "relative", backgroundColor: "var(--color-bg-surface)", border: "1px solid var(--color-border-default)", borderRadius: "12px", padding: "16px 20px" }}>
+              <div 
+                style={{ position: "absolute", top: "12px", right: "12px", cursor: "pointer" }}
+                onMouseEnter={() => setActiveTooltip("net")}
+                onMouseLeave={() => setActiveTooltip(null)}
+              >
+                <i className="ri-information-line" style={{ color: "var(--color-text-tertiary)", fontSize: "14px" }}></i>
+                {activeTooltip === "net" && (
+                  <div style={{
+                    position: "absolute",
+                    top: "20px",
+                    right: "0",
+                    backgroundColor: "var(--color-text-primary)",
+                    color: "var(--color-text-inverse)",
+                    padding: "6px 10px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    width: "180px",
+                    boxShadow: "var(--shadow-sm)",
+                    zIndex: 100,
+                    lineHeight: "1.3",
+                    fontWeight: "normal"
+                  }}>
+                    Your total earnings after the 10% platform commission is deducted from gross sales.
+                  </div>
+                )}
+              </div>
+              <div className="card-icon-circle seller-color" style={{ backgroundColor: "rgba(66, 133, 244, 0.1)", color: "#4285F4" }}><i className="ri-wallet-3-line"></i></div>
               <div className="card-numeric-info">
-                <h3>₹{(earningsData.netEarnings || 0).toLocaleString()}</h3>
-                <p>Net Earnings</p>
+                <h3 style={{ fontSize: "1.6rem", fontWeight: "700" }}>₹{(earningsData.netEarnings || 0).toLocaleString()}</h3>
+                <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>Net Earnings</p>
               </div>
             </div>
 
-            <div className="metric-box-card">
-              <div className="card-icon-circle seller-color"><i className="ri-book-open-line"></i></div>
+            <div className="metric-box-card" style={{ position: "relative", backgroundColor: "var(--color-bg-surface)", border: "1px solid var(--color-border-default)", borderRadius: "12px", padding: "16px 20px" }}>
+              <div 
+                style={{ position: "absolute", top: "12px", right: "12px", cursor: "pointer" }}
+                onMouseEnter={() => setActiveTooltip("sold")}
+                onMouseLeave={() => setActiveTooltip(null)}
+              >
+                <i className="ri-information-line" style={{ color: "var(--color-text-tertiary)", fontSize: "14px" }}></i>
+                {activeTooltip === "sold" && (
+                  <div style={{
+                    position: "absolute",
+                    top: "20px",
+                    right: "0",
+                    backgroundColor: "var(--color-text-primary)",
+                    color: "var(--color-text-inverse)",
+                    padding: "6px 10px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    width: "180px",
+                    boxShadow: "var(--shadow-sm)",
+                    zIndex: 100,
+                    lineHeight: "1.3",
+                    fontWeight: "normal"
+                  }}>
+                    The total quantity of academic book listings successfully traded and completed.
+                  </div>
+                )}
+              </div>
+              <div className="card-icon-circle seller-color" style={{ backgroundColor: "rgba(251, 188, 5, 0.1)", color: "#FBBC05" }}><i className="ri-book-open-line"></i></div>
               <div className="card-numeric-info">
-                <h3>{earningsData.booksSold || 0}</h3>
-                <p>Books Sold</p>
+                <h3 style={{ fontSize: "1.6rem", fontWeight: "700" }}>{earningsData.booksSold || 0}</h3>
+                <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>Books Sold</p>
               </div>
             </div>
           </div>
@@ -1324,6 +1649,81 @@ export const SellerDashboard = ({ activeTab }) => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* C. Unified Ledger / Transactions Log */}
+          <div className="feed-panel" style={{ padding: "24px", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+              <div>
+                <h3 className="panel-title-heading" style={{ fontSize: "1.1rem", fontWeight: "700", margin: "0 0 4px 0" }}>Recent Transactions</h3>
+                <p style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)", margin: 0 }}>Unified audit ledger of sales credits and withdrawal debits</p>
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                {["all", "credit", "debit"].map((type) => (
+                  <button 
+                    key={type}
+                    type="button"
+                    className={`btn btn-xs ${transactionTypeFilter === type ? "btn-brand" : "btn-outline"}`}
+                    onClick={() => setTransactionTypeFilter(type)}
+                    style={{ textTransform: "capitalize" }}
+                  >
+                    {type === "all" ? "All Ledger" : type === "credit" ? "Credits" : "Debits"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="table-responsive" style={{ overflowX: "auto" }}>
+              <table className="table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                <thead>
+                  <tr style={{ borderBottom: "2px solid var(--color-border-default)", textAlign: "left" }}>
+                    <th style={{ padding: "12px 8px" }}>Date</th>
+                    <th style={{ padding: "12px 8px" }}>Type</th>
+                    <th style={{ padding: "12px 8px" }}>Description</th>
+                    <th style={{ padding: "12px 8px" }}>Amount</th>
+                    <th style={{ padding: "12px 8px" }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transactions.map((tx) => (
+                    <tr key={tx._id} style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
+                      <td style={{ padding: "12px 8px" }}>{new Date(tx.date).toLocaleDateString()}</td>
+                      <td style={{ padding: "12px 8px" }}>
+                        <span className={`badge ${tx.type === "credit" ? "badge-success" : "badge-warning"}`} style={{ textTransform: "uppercase", fontSize: "9px" }}>
+                          {tx.type}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px 8px" }}>{tx.description}</td>
+                      <td style={{ padding: "12px 8px", fontWeight: "600", color: tx.type === "credit" ? "#34A853" : "#EA4335" }}>
+                        {tx.type === "credit" ? "+" : "-"}₹{tx.amount}
+                      </td>
+                      <td style={{ padding: "12px 8px" }}>
+                        <span className={`badge status-pill ${tx.status}`} style={{ fontSize: "10px", textTransform: "capitalize" }}>
+                          {tx.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {transactions.length === 0 && (
+                    <tr>
+                      <td colSpan="5" style={{ padding: "24px", textAlign: "center", color: "var(--color-text-secondary)" }}>
+                        No transactions logged matching filters.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {hasMoreTransactions && (
+              <button 
+                className="btn btn-outline btn-sm" 
+                onClick={loadMoreTransactions}
+                style={{ alignSelf: "center", marginTop: "8px" }}
+              >
+                See More Transactions
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -1846,6 +2246,378 @@ export const SellerDashboard = ({ activeTab }) => {
         </div>
       )}
 
+      {/* --- 8. FINANCES & PAYOUTS VIEW --- */}
+      {activeTab === "payouts" && !loading && (
+        <div className="tab-view-container finances-payouts-view animate-fade" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          
+          {/* A. Dynamic Financial Summary Grid */}
+          <div className="grid-summary-metric-cards" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
+            <div className="metric-box-card" style={{ position: "relative", backgroundColor: "var(--color-bg-surface)", border: "1px solid var(--color-border-default)", borderRadius: "12px", padding: "16px 20px" }}>
+              <div 
+                style={{ position: "absolute", top: "12px", right: "12px", cursor: "pointer" }}
+                onMouseEnter={() => setActiveTooltip("gross")}
+                onMouseLeave={() => setActiveTooltip(null)}
+              >
+                <i className="ri-information-line" style={{ color: "var(--color-text-tertiary)", fontSize: "14px" }}></i>
+                {activeTooltip === "gross" && (
+                  <div style={{
+                    position: "absolute",
+                    top: "20px",
+                    right: "0",
+                    backgroundColor: "var(--color-text-primary)",
+                    color: "var(--color-text-inverse)",
+                    padding: "6px 10px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    width: "180px",
+                    boxShadow: "var(--shadow-sm)",
+                    zIndex: 100,
+                    lineHeight: "1.3",
+                    fontWeight: "normal"
+                  }}>
+                    Total revenue generated from all sold book listings before platform commission deductions.
+                  </div>
+                )}
+              </div>
+              <div className="card-icon-circle seller-color" style={{ backgroundColor: "rgba(52, 168, 83, 0.1)", color: "#34A853" }}><i className="ri-money-dollar-circle-line"></i></div>
+              <div className="card-numeric-info">
+                <h3 style={{ fontSize: "1.6rem", fontWeight: "700" }}>₹{payoutFinancials.grossEarnings}</h3>
+                <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>Gross Earnings</p>
+              </div>
+            </div>
+
+            <div className="metric-box-card" style={{ position: "relative", backgroundColor: "var(--color-bg-surface)", border: "1px solid var(--color-border-default)", borderRadius: "12px", padding: "16px 20px" }}>
+              <div 
+                style={{ position: "absolute", top: "12px", right: "12px", cursor: "pointer" }}
+                onMouseEnter={() => setActiveTooltip("commission")}
+                onMouseLeave={() => setActiveTooltip(null)}
+              >
+                <i className="ri-information-line" style={{ color: "var(--color-text-tertiary)", fontSize: "14px" }}></i>
+                {activeTooltip === "commission" && (
+                  <div style={{
+                    position: "absolute",
+                    top: "20px",
+                    right: "0",
+                    backgroundColor: "var(--color-text-primary)",
+                    color: "var(--color-text-inverse)",
+                    padding: "6px 10px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    width: "180px",
+                    boxShadow: "var(--shadow-sm)",
+                    zIndex: 100,
+                    lineHeight: "1.3",
+                    fontWeight: "normal"
+                  }}>
+                    10% service fee deducted by PustakMart to support the platform services.
+                  </div>
+                )}
+              </div>
+              <div className="card-icon-circle seller-color" style={{ backgroundColor: "rgba(234, 67, 53, 0.1)", color: "#EA4335" }}><i className="ri-percent-line"></i></div>
+              <div className="card-numeric-info">
+                <h3 style={{ fontSize: "1.6rem", fontWeight: "700" }}>₹{payoutFinancials.commission}</h3>
+                <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>Platform Commission (10%)</p>
+              </div>
+            </div>
+
+            <div className="metric-box-card" style={{ position: "relative", backgroundColor: "var(--color-bg-surface)", border: "1px solid var(--color-border-default)", borderRadius: "12px", padding: "16px 20px" }}>
+              <div 
+                style={{ position: "absolute", top: "12px", right: "12px", cursor: "pointer" }}
+                onMouseEnter={() => setActiveTooltip("net")}
+                onMouseLeave={() => setActiveTooltip(null)}
+              >
+                <i className="ri-information-line" style={{ color: "var(--color-text-tertiary)", fontSize: "14px" }}></i>
+                {activeTooltip === "net" && (
+                  <div style={{
+                    position: "absolute",
+                    top: "20px",
+                    right: "0",
+                    backgroundColor: "var(--color-text-primary)",
+                    color: "var(--color-text-inverse)",
+                    padding: "6px 10px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    width: "180px",
+                    boxShadow: "var(--shadow-sm)",
+                    zIndex: 100,
+                    lineHeight: "1.3",
+                    fontWeight: "normal"
+                  }}>
+                    Your total earnings after the 10% platform commission is deducted from gross sales.
+                  </div>
+                )}
+              </div>
+              <div className="card-icon-circle seller-color" style={{ backgroundColor: "rgba(66, 133, 244, 0.1)", color: "#4285F4" }}><i className="ri-coins-line"></i></div>
+              <div className="card-numeric-info">
+                <h3 style={{ fontSize: "1.6rem", fontWeight: "700" }}>₹{payoutFinancials.netEarnings}</h3>
+                <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>Net Earnings</p>
+              </div>
+            </div>
+
+            <div className="metric-box-card" style={{ position: "relative", backgroundColor: "var(--color-brand-light)", border: "1px solid var(--color-brand)", borderRadius: "12px", padding: "16px 20px" }}>
+              <div 
+                style={{ position: "absolute", top: "12px", right: "12px", cursor: "pointer" }}
+                onMouseEnter={() => setActiveTooltip("available")}
+                onMouseLeave={() => setActiveTooltip(null)}
+              >
+                <i className="ri-information-line" style={{ color: "var(--color-text-tertiary)", fontSize: "14px" }}></i>
+                {activeTooltip === "available" && (
+                  <div style={{
+                    position: "absolute",
+                    top: "20px",
+                    right: "0",
+                    backgroundColor: "var(--color-text-primary)",
+                    color: "var(--color-text-inverse)",
+                    padding: "6px 10px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    width: "180px",
+                    boxShadow: "var(--shadow-sm)",
+                    zIndex: 100,
+                    lineHeight: "1.3",
+                    fontWeight: "normal"
+                  }}>
+                    Current funds available for withdrawal. Calculated as Net Earnings minus processed/pending withdrawals.
+                  </div>
+                )}
+              </div>
+              <div className="card-icon-circle seller-color" style={{ backgroundColor: "var(--color-brand)", color: "#ffffff" }}><i className="ri-wallet-3-line"></i></div>
+              <div className="card-numeric-info">
+                <h3 style={{ fontSize: "1.8rem", fontWeight: "800", color: "var(--color-brand)" }}>₹{payoutFinancials.availableBalance}</h3>
+                <p style={{ color: "var(--color-text-primary)", fontWeight: "600", fontSize: "0.85rem" }}>Available Balance</p>
+              </div>
+            </div>
+
+            <div className="metric-box-card" style={{ position: "relative", backgroundColor: "var(--color-bg-surface)", border: "1px solid var(--color-border-default)", borderRadius: "12px", padding: "16px 20px" }}>
+              <div 
+                style={{ position: "absolute", top: "12px", right: "12px", cursor: "pointer" }}
+                onMouseEnter={() => setActiveTooltip("pending")}
+                onMouseLeave={() => setActiveTooltip(null)}
+              >
+                <i className="ri-information-line" style={{ color: "var(--color-text-tertiary)", fontSize: "14px" }}></i>
+                {activeTooltip === "pending" && (
+                  <div style={{
+                    position: "absolute",
+                    top: "20px",
+                    right: "0",
+                    backgroundColor: "var(--color-text-primary)",
+                    color: "var(--color-text-inverse)",
+                    padding: "6px 10px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    width: "180px",
+                    boxShadow: "var(--shadow-sm)",
+                    zIndex: 100,
+                    lineHeight: "1.3",
+                    fontWeight: "normal"
+                  }}>
+                    Withdrawals currently in process or awaiting admin approval.
+                  </div>
+                )}
+              </div>
+              <div className="card-icon-circle seller-color" style={{ backgroundColor: "rgba(251, 188, 5, 0.1)", color: "#FBBC05" }}><i className="ri-time-line"></i></div>
+              <div className="card-numeric-info">
+                <h3 style={{ fontSize: "1.6rem", fontWeight: "700" }}>₹{payoutFinancials.pendingWithdrawals}</h3>
+                <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>Pending/Held</p>
+              </div>
+            </div>
+
+            <div className="metric-box-card" style={{ position: "relative", backgroundColor: "var(--color-bg-surface)", border: "1px solid var(--color-border-default)", borderRadius: "12px", padding: "16px 20px" }}>
+              <div 
+                style={{ position: "absolute", top: "12px", right: "12px", cursor: "pointer" }}
+                onMouseEnter={() => setActiveTooltip("withdrawn")}
+                onMouseLeave={() => setActiveTooltip(null)}
+              >
+                <i className="ri-information-line" style={{ color: "var(--color-text-tertiary)", fontSize: "14px" }}></i>
+                {activeTooltip === "withdrawn" && (
+                  <div style={{
+                    position: "absolute",
+                    top: "20px",
+                    right: "0",
+                    backgroundColor: "var(--color-text-primary)",
+                    color: "var(--color-text-inverse)",
+                    padding: "6px 10px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    width: "180px",
+                    boxShadow: "var(--shadow-sm)",
+                    zIndex: 100,
+                    lineHeight: "1.3",
+                    fontWeight: "normal"
+                  }}>
+                    Total amount of funds successfully transferred to your bank or UPI account.
+                  </div>
+                )}
+              </div>
+              <div className="card-icon-circle seller-color" style={{ backgroundColor: "rgba(52, 168, 83, 0.1)", color: "#34A853" }}><i className="ri-checkbox-circle-line"></i></div>
+              <div className="card-numeric-info">
+                <h3 style={{ fontSize: "1.6rem", fontWeight: "700" }}>₹{payoutFinancials.totalWithdrawn}</h3>
+                <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>Total Withdrawn</p>
+              </div>
+            </div>
+          </div>
+
+          {/* B. Action Panel & Setup summary */}
+          <div className="feed-panel" style={{ padding: "24px", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
+              <div>
+                <h2 className="panel-title-heading" style={{ fontSize: "1.3rem", fontWeight: "700", margin: "0 0 6px 0" }}>Withdrawal Request Portal</h2>
+                <p style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)", margin: 0 }}>
+                  Transfer your earnings directly to your UPI ID or bank account.
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button 
+                  className="btn btn-outline" 
+                  onClick={() => setShowPayoutSetupModal(true)}
+                  disabled={payoutFinancials.pendingWithdrawals > 0}
+                  title={payoutFinancials.pendingWithdrawals > 0 ? "Blocked while withdrawal is active" : ""}
+                >
+                  <i className="ri-settings-5-line"></i> Payout Config
+                </button>
+                <button 
+                  className="btn btn-brand" 
+                  disabled={payoutFinancials.availableBalance < 300 || payoutFinancials.pendingWithdrawals > 0}
+                  onClick={() => {
+                    if (!payoutProfile) {
+                      setShowPayoutSetupModal(true);
+                    } else {
+                      setWithdrawalAmount(payoutFinancials.availableBalance);
+                      setShowWithdrawModal(true);
+                    }
+                  }}
+                >
+                  <i className="ri-hand-coin-line"></i> Request Withdrawal
+                </button>
+              </div>
+            </div>
+
+            {/* Validation warning feedback */}
+            {(payoutFinancials.availableBalance < 300 || payoutFinancials.pendingWithdrawals > 0) && (
+              <div style={{ padding: "12px 16px", borderRadius: "8px", backgroundColor: "rgba(251, 188, 5, 0.08)", border: "1px solid rgba(251, 188, 5, 0.25)", display: "flex", alignItems: "center", gap: "10px", fontSize: "0.85rem" }}>
+                <i className="ri-error-warning-line" style={{ color: "#FBBC05", fontSize: "1.1rem" }}></i>
+                <span>
+                  {payoutFinancials.pendingWithdrawals > 0 
+                    ? "Withdrawal locked: You currently have a pending request. Please wait for admin approval."
+                    : `Withdrawal locked: A minimum available balance of ₹300 is required (current: ₹${payoutFinancials.availableBalance}).`
+                  }
+                </span>
+              </div>
+            )}
+
+            {/* Credentials details quick review */}
+            {payoutProfile ? (
+              <div style={{ padding: "16px", borderRadius: "8px", backgroundColor: "var(--color-bg-surface-2)", border: "1px solid var(--color-border-subtle)", display: "flex", flexDirection: "column", gap: "12px" }}>
+                <h4 style={{ margin: 0, fontSize: "0.9rem", fontWeight: "600" }}>Active Payout Method: <span className="text-brand" style={{ textTransform: "uppercase" }}>{payoutProfile.preferredMethod}</span></h4>
+                {payoutProfile.preferredMethod === "upi" ? (
+                  <div style={{ fontSize: "0.85rem" }}>
+                    <strong>UPI ID:</strong> <code>{payoutProfile.upi?.upiId}</code>
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", fontSize: "0.85rem" }}>
+                    <div><strong>Bank Holder:</strong> {payoutProfile.bank?.accountHolderName}</div>
+                    <div><strong>Bank Name:</strong> {payoutProfile.bank?.bankName}</div>
+                    <div><strong>Account No:</strong> *******{payoutProfile.bank?.accountNumber?.slice(-4)}</div>
+                    <div><strong>IFSC Code:</strong> {payoutProfile.bank?.ifscCode}</div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ padding: "16px", borderRadius: "8px", backgroundColor: "rgba(234, 67, 53, 0.05)", border: "1px solid rgba(234, 67, 53, 0.15)", textAlign: "center", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+                <i className="ri-error-warning-fill" style={{ color: "#EA4335", marginRight: "6px" }}></i>
+                Payout setup is missing. Please click **Payout Config** to add bank details or UPI.
+              </div>
+            )}
+          </div>
+
+
+
+          {/* D. Specific Withdrawal Requests History Tracking */}
+          <div className="feed-panel" style={{ padding: "24px", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+              <div>
+                <h3 className="panel-title-heading" style={{ fontSize: "1.1rem", fontWeight: "700", margin: "0 0 4px 0" }}>Withdrawal History</h3>
+                <p style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)", margin: 0 }}>Track status of requested settlements</p>
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                {["all", "pending", "completed", "rejected"].map((status) => (
+                  <button 
+                    key={status}
+                    type="button"
+                    className={`btn btn-xs ${withdrawalFilter === status ? "btn-brand" : "btn-outline"}`}
+                    onClick={() => setWithdrawalFilter(status)}
+                    style={{ textTransform: "capitalize" }}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="table-responsive" style={{ overflowX: "auto" }}>
+              <table className="table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                <thead>
+                  <tr style={{ borderBottom: "2px solid var(--color-border-default)", textAlign: "left" }}>
+                    <th style={{ padding: "12px 8px" }}>Requested On</th>
+                    <th style={{ padding: "12px 8px" }}>Amount</th>
+                    <th style={{ padding: "12px 8px" }}>Method</th>
+                    <th style={{ padding: "12px 8px" }}>Status</th>
+                    <th style={{ padding: "12px 8px" }}>Reference / Remark</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {withdrawalRequests.map((wr) => (
+                    <tr key={wr._id} style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
+                      <td style={{ padding: "12px 8px" }}>{new Date(wr.requestedAt).toLocaleDateString()}</td>
+                      <td style={{ padding: "12px 8px", fontWeight: "600" }}>₹{wr.amount}</td>
+                      <td style={{ padding: "12px 8px", textTransform: "uppercase" }}>{wr.payoutMethod}</td>
+                      <td style={{ padding: "12px 8px" }}>
+                        <span className={`badge status-pill ${wr.status}`} style={{ fontSize: "10px", textTransform: "capitalize" }}>
+                          {wr.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px 8px" }}>
+                        {wr.status === "completed" && (
+                          <div style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>
+                            Ref: <code>{wr.transactionReference}</code>
+                          </div>
+                        )}
+                        {wr.status === "rejected" && (
+                          <div style={{ fontSize: "0.8rem", color: "red" }}>
+                            Rejection Remark: <em>{wr.adminRemark}</em>
+                          </div>
+                        )}
+                        {!["completed", "rejected"].includes(wr.status) && (
+                          <span style={{ color: "var(--color-text-tertiary)" }}>N/A</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {withdrawalRequests.length === 0 && (
+                    <tr>
+                      <td colSpan="5" style={{ padding: "24px", textAlign: "center", color: "var(--color-text-secondary)" }}>
+                        No withdrawals requested yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {hasMoreWithdrawals && (
+              <button 
+                className="btn btn-outline btn-sm" 
+                onClick={loadMoreWithdrawals}
+                style={{ alignSelf: "center", marginTop: "8px" }}
+              >
+                See More History
+              </button>
+            )}
+          </div>
+
+        </div>
+      )}
+
       {/* --- 7. SELLER PROFILE VIEW --- */}
       {activeTab === "seller-profile" && !loading && (
         <div className="tab-view-container profile-settings-view animate-fade">
@@ -1988,6 +2760,171 @@ export const SellerDashboard = ({ activeTab }) => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* PAYOUT CONFIG SETUP MODAL */}
+      {showPayoutSetupModal && (
+        <div className="modal-backdrop-overlay" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+          <form className="modal-card-container animate-slide-up" onSubmit={handleSetupPayoutSubmit} style={{ backgroundColor: "var(--color-bg-page)", padding: "24px", borderRadius: "12px", width: "450px", maxWidth: "90%", boxShadow: "0 10px 25px rgba(0,0,0,0.15)", maxHeight: "90vh", overflowY: "auto" }}>
+            <h3 style={{ margin: "0 0 12px 0", fontSize: "16px", fontWeight: "700" }}>Configure Payout Profile</h3>
+            <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", margin: "0 0 16px 0" }}>
+              Provide your preferred method to receive earnings manually from our admins.
+            </p>
+
+            <div className="form-group-field" style={{ marginBottom: "16px" }}>
+              <label style={{ fontSize: "11px", fontWeight: "600", marginBottom: "6px", display: "block" }}>Preferred Method *</label>
+              <select 
+                value={preferredMethod} 
+                onChange={(e) => setPreferredMethod(e.target.value)} 
+                className="form-control"
+                style={{ width: "100%", height: "38px", borderRadius: "6px", border: "1px solid var(--color-border-medium)", padding: "0 8px" }}
+              >
+                <option value="upi">UPI Transfer</option>
+                <option value="bank">Bank Wire Transfer</option>
+              </select>
+            </div>
+
+            {preferredMethod === "upi" ? (
+              <div className="form-group-field" style={{ marginBottom: "20px" }}>
+                <label style={{ fontSize: "11px", fontWeight: "600", marginBottom: "6px", display: "block" }}>UPI ID *</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  placeholder="e.g. name@bank" 
+                  value={upiId} 
+                  required
+                  onChange={(e) => setUpiId(e.target.value)}
+                  style={{ width: "100%", height: "38px", borderRadius: "6px", border: "1px solid var(--color-border-medium)", padding: "0 8px" }}
+                />
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "20px" }}>
+                <div className="form-group-field">
+                  <label style={{ fontSize: "11px", fontWeight: "600", marginBottom: "4px", display: "block" }}>Account Holder Name *</label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    value={accountHolderName} 
+                    required 
+                    onChange={(e) => setAccountHolderName(e.target.value)}
+                    style={{ width: "100%", height: "38px", borderRadius: "6px", border: "1px solid var(--color-border-medium)", padding: "0 8px" }}
+                  />
+                </div>
+                <div className="form-group-field">
+                  <label style={{ fontSize: "11px", fontWeight: "600", marginBottom: "4px", display: "block" }}>Bank Name *</label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    value={bankName} 
+                    required 
+                    onChange={(e) => setBankName(e.target.value)}
+                    style={{ width: "100%", height: "38px", borderRadius: "6px", border: "1px solid var(--color-border-medium)", padding: "0 8px" }}
+                  />
+                </div>
+                <div className="form-group-field">
+                  <label style={{ fontSize: "11px", fontWeight: "600", marginBottom: "4px", display: "block" }}>Account Number *</label>
+                  <input 
+                    type="password" 
+                    className="form-control" 
+                    value={accountNumber} 
+                    required 
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                    style={{ width: "100%", height: "38px", borderRadius: "6px", border: "1px solid var(--color-border-medium)", padding: "0 8px" }}
+                  />
+                </div>
+                <div className="form-group-field">
+                  <label style={{ fontSize: "11px", fontWeight: "600", marginBottom: "4px", display: "block" }}>Confirm Account Number *</label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    value={confirmAccountNumber} 
+                    required 
+                    onChange={(e) => setConfirmAccountNumber(e.target.value)}
+                    style={{ width: "100%", height: "38px", borderRadius: "6px", border: "1px solid var(--color-border-medium)", padding: "0 8px" }}
+                  />
+                </div>
+                <div className="form-group-field">
+                  <label style={{ fontSize: "11px", fontWeight: "600", marginBottom: "4px", display: "block" }}>IFSC Code *</label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    placeholder="e.g. SBIN0001234" 
+                    value={ifscCode} 
+                    required 
+                    onChange={(e) => setIfscCode(e.target.value)}
+                    style={{ width: "100%", height: "38px", borderRadius: "6px", border: "1px solid var(--color-border-medium)", padding: "0 8px" }}
+                  />
+                </div>
+                <div className="form-group-field">
+                  <label style={{ fontSize: "11px", fontWeight: "600", marginBottom: "4px", display: "block" }}>Branch Name *</label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    value={branchName} 
+                    required 
+                    onChange={(e) => setBranchName(e.target.value)}
+                    style={{ width: "100%", height: "38px", borderRadius: "6px", border: "1px solid var(--color-border-medium)", padding: "0 8px" }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowPayoutSetupModal(false)}>Cancel</button>
+              <button type="submit" className="btn btn-brand btn-sm">Save Profile</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* WITHDRAWAL REQUEST CONFIRMATION MODAL */}
+      {showWithdrawModal && (
+        <div className="modal-backdrop-overlay" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+          <form className="modal-card-container animate-slide-up" onSubmit={handleRequestWithdrawalSubmit} style={{ backgroundColor: "var(--color-bg-page)", padding: "24px", borderRadius: "12px", width: "400px", maxWidth: "90%", boxShadow: "0 10px 25px rgba(0,0,0,0.15)" }}>
+            <h3 style={{ margin: "0 0 12px 0", fontSize: "16px", fontWeight: "700" }}>Request Earnings Withdrawal</h3>
+            
+            <div style={{ padding: "12px", borderRadius: "6px", backgroundColor: "var(--color-bg-surface-2)", border: "1px solid var(--color-border-subtle)", marginBottom: "16px", fontSize: "0.85rem" }}>
+              <div>Available Balance: <strong style={{ color: "var(--color-brand)" }}>₹{payoutFinancials.availableBalance}</strong></div>
+              <div>Configured Payout Method: <strong style={{ textTransform: "uppercase" }}>{payoutProfile?.preferredMethod}</strong></div>
+            </div>
+
+            <div className="form-group-field" style={{ marginBottom: "16px" }}>
+              <label style={{ fontSize: "11px", fontWeight: "600", marginBottom: "6px", display: "block" }}>Withdrawal Amount (₹) *</label>
+              <input 
+                type="number" 
+                className="form-control" 
+                min="300"
+                max={payoutFinancials.availableBalance}
+                placeholder="e.g. 500" 
+                required
+                value={withdrawalAmount} 
+                onChange={(e) => setWithdrawalAmount(e.target.value)}
+                style={{ width: "100%", height: "38px", borderRadius: "6px", border: "1px solid var(--color-border-medium)", padding: "0 8px" }}
+              />
+              <span style={{ fontSize: "10px", color: "var(--color-text-tertiary)", marginTop: "4px", display: "block" }}>
+                Minimum withdrawal amount is ₹300.
+              </span>
+            </div>
+
+            <div className="form-group-field" style={{ marginBottom: "20px" }}>
+              <label style={{ fontSize: "11px", fontWeight: "600", marginBottom: "6px", display: "block" }}>Payout Channel *</label>
+              <select 
+                value={withdrawalMethod} 
+                onChange={(e) => setWithdrawalMethod(e.target.value)}
+                className="form-control"
+                style={{ width: "100%", height: "38px", borderRadius: "6px", border: "1px solid var(--color-border-medium)", padding: "0 8px" }}
+              >
+                {payoutProfile?.upi?.upiId && <option value="upi">UPI ({payoutProfile.upi.upiId})</option>}
+                {payoutProfile?.bank?.accountNumber && <option value="bank">Bank Account (*{payoutProfile.bank.accountNumber.slice(-4)})</option>}
+              </select>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowWithdrawModal(false)}>Cancel</button>
+              <button type="submit" className="btn btn-brand btn-sm">Request Transfer</button>
+            </div>
+          </form>
         </div>
       )}
 

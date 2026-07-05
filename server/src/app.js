@@ -20,6 +20,12 @@ import { mediaRoute } from "./routes/media.routes.js";
 import { paymentRoute } from "./routes/payments.routes.js";
 import { listingsCheckoutRoute } from "./routes/listings.routes.js";
 import { sellerRoute } from "./routes/seller.routes.js";
+import { payoutRoute } from "./routes/payout.routes.js";
+import { withdrawalRoute } from "./routes/withdrawal.routes.js";
+import { adminWithdrawalRoute } from "./routes/adminWithdrawal.routes.js";
+import { getSellerTransactionsController } from "./controllers/withdrawal.controller.js";
+import { authUser } from "./middlewares/auth.middleware.js";
+
 
 const app = express();
 
@@ -52,6 +58,11 @@ app.use("/api/payment", paymentRoute);
 app.use("/api/payments", paymentRoute);
 app.use("/api/listings", listingsCheckoutRoute);
 app.use("/api/seller", sellerRoute);
+app.use("/api/seller/payout", payoutRoute);
+app.use("/api/seller/withdrawals", withdrawalRoute);
+app.get("/api/seller/transactions", authUser, getSellerTransactionsController);
+app.use("/api/admin/withdrawals", adminWithdrawalRoute);
+
 
 // Catch-all route for unmatched paths (404)
 app.use((req, res, next) => {
