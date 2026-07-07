@@ -1075,7 +1075,7 @@ export const SellerDashboard = ({ activeTab }) => {
                 <h3 className="section-subtitle">Top Book Views</h3>
                 <div className="chart-vertical-bars">
                   {sellerListings.slice(0, 4).map((l) => {
-                    const pct = Math.min(100, Math.max(8, totalViews > 0 ? (l.viewsCount / totalViews) * 100 : 10));
+                    const pct = (l.viewsCount || 0) > 0 && totalViews > 0 ? Math.min(100, Math.max(8, (l.viewsCount / totalViews) * 100)) : 0;
                     return (
                       <div className="chart-bar-row" key={l._id}>
                         <span className="bar-label">{l.title.substring(0, 24)}...</span>
@@ -1603,7 +1603,7 @@ export const SellerDashboard = ({ activeTab }) => {
                         <div className="chart-bar-row" key={idx}>
                           <span className="bar-label">{label}</span>
                           <div className="bar-wrapper">
-                            <div className="bar-fill seller-color" style={{ width: `${Math.max(6, pct)}%` }}></div>
+                            <div className="bar-fill seller-color" style={{ width: `${data.salesCount > 0 ? Math.max(6, pct) : 0}%` }}></div>
                           </div>
                           <span className="bar-value">{data.salesCount} sold</span>
                         </div>
@@ -1635,7 +1635,7 @@ export const SellerDashboard = ({ activeTab }) => {
                         <div className="chart-bar-row" key={idx}>
                           <span className="bar-label">{label}</span>
                           <div className="bar-wrapper">
-                            <div className="bar-fill seller-color" style={{ width: `${Math.max(6, pct)}%` }}></div>
+                            <div className="bar-fill seller-color" style={{ width: `${data.earnings > 0 ? Math.max(6, pct) : 0}%` }}></div>
                           </div>
                           <span className="bar-value">₹{(data.earnings || 0).toLocaleString()}</span>
                         </div>
@@ -1791,7 +1791,7 @@ export const SellerDashboard = ({ activeTab }) => {
                       <div className="chart-bar-row" key={cat}>
                         <span className="bar-label">{label}</span>
                         <div className="bar-wrapper">
-                          <div className="bar-fill seller-color" style={{ width: `${Math.max(4, pct)}%` }}></div>
+                          <div className="bar-fill seller-color" style={{ width: `${catViews > 0 ? Math.max(4, pct) : 0}%` }}></div>
                         </div>
                         <span className="bar-value">{catViews} views</span>
                       </div>
