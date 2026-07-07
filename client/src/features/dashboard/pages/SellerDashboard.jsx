@@ -360,6 +360,19 @@ export const SellerDashboard = ({ activeTab }) => {
         });
       }
 
+      // Fetch Payout/Financials data as well to make availableBalance/pendingWithdrawals available
+      const payoutRes = await getSellerPayoutDetailsApi();
+      if (payoutRes.success) {
+        setPayoutFinancials({
+          grossEarnings: payoutRes.grossEarnings || 0,
+          commission: payoutRes.commission || 0,
+          netEarnings: payoutRes.netEarnings || 0,
+          pendingWithdrawals: payoutRes.pendingWithdrawals || 0,
+          totalWithdrawn: payoutRes.totalWithdrawn || 0,
+          availableBalance: payoutRes.availableBalance || 0
+        });
+      }
+
       // Fetch Transactions log when in Sales Analytics tab
       if (activeTab === "sales-analytics") {
         setTransactionsPage(1);
@@ -1103,9 +1116,16 @@ export const SellerDashboard = ({ activeTab }) => {
                       <div className="review-header-row">
                         <strong>{r.buyer?.name || "Student"}</strong>
                         <div className="rating-stars">
-                          {[...Array(5)].map((_, i) => (
-                            <i className={`ri-star-fill ${i < r.rating ? "text-gold" : "text-gray"}`} key={i}></i>
-                          ))}
+                          {[...Array(5)].map((_, i) => {
+                            const isFilled = i < r.rating;
+                            return (
+                              <i 
+                                className={isFilled ? "ri-star-fill" : "ri-star-line"} 
+                                style={{ color: isFilled ? "var(--color-brand)" : "var(--color-text-disabled)" }} 
+                                key={i}
+                              ></i>
+                            );
+                          })}
                         </div>
                       </div>
                       <p className="review-comment">"{r.review}"</p>
@@ -1475,7 +1495,7 @@ export const SellerDashboard = ({ activeTab }) => {
                   </div>
                 )}
               </div>
-              <div className="card-icon-circle seller-color" style={{ backgroundColor: "rgba(52, 168, 83, 0.1)", color: "#34A853" }}><i className="ri-money-dollar-box-line"></i></div>
+              <div className="card-icon-circle seller-color" style={{ backgroundColor: "rgba(52, 168, 83, 0.1)", color: "#34A853" }}><i className="ri-money-rupee-circle-line"></i></div>
               <div className="card-numeric-info">
                 <h3 style={{ fontSize: "1.6rem", fontWeight: "700" }}>₹{(earningsData.grossEarnings || 0).toLocaleString()}</h3>
                 <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>Gross Earnings</p>
@@ -1547,6 +1567,74 @@ export const SellerDashboard = ({ activeTab }) => {
               <div className="card-numeric-info">
                 <h3 style={{ fontSize: "1.6rem", fontWeight: "700" }}>₹{(earningsData.netEarnings || 0).toLocaleString()}</h3>
                 <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>Net Earnings</p>
+              </div>
+            </div>
+
+            <div className="metric-box-card" style={{ position: "relative", backgroundColor: "var(--color-brand-light)", border: "1px solid var(--color-brand)", borderRadius: "12px", padding: "16px 20px" }}>
+              <div 
+                style={{ position: "absolute", top: "12px", right: "12px", cursor: "pointer" }}
+                onMouseEnter={() => setActiveTooltip("available")}
+                onMouseLeave={() => setActiveTooltip(null)}
+              >
+                <i className="ri-information-line" style={{ color: "var(--color-text-tertiary)", fontSize: "14px" }}></i>
+                {activeTooltip === "available" && (
+                  <div style={{
+                    position: "absolute",
+                    top: "20px",
+                    right: "0",
+                    backgroundColor: "var(--color-text-primary)",
+                    color: "var(--color-text-inverse)",
+                    padding: "6px 10px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    width: "180px",
+                    boxShadow: "var(--shadow-sm)",
+                    zIndex: 100,
+                    lineHeight: "1.3",
+                    fontWeight: "normal"
+                  }}>
+                    Current funds available for withdrawal. Calculated as Net Earnings minus processed/pending withdrawals.
+                  </div>
+                )}
+              </div>
+              <div className="card-icon-circle seller-color" style={{ backgroundColor: "var(--color-brand)", color: "#ffffff" }}><i className="ri-wallet-3-line"></i></div>
+              <div className="card-numeric-info">
+                <h3 style={{ fontSize: "1.8rem", fontWeight: "800", color: "var(--color-brand)" }}>₹{(payoutFinancials.availableBalance || 0).toLocaleString()}</h3>
+                <p style={{ color: "var(--color-text-primary)", fontWeight: "600", fontSize: "0.85rem" }}>Available Balance</p>
+              </div>
+            </div>
+
+            <div className="metric-box-card" style={{ position: "relative", backgroundColor: "var(--color-bg-surface)", border: "1px solid var(--color-border-default)", borderRadius: "12px", padding: "16px 20px" }}>
+              <div 
+                style={{ position: "absolute", top: "12px", right: "12px", cursor: "pointer" }}
+                onMouseEnter={() => setActiveTooltip("pending")}
+                onMouseLeave={() => setActiveTooltip(null)}
+              >
+                <i className="ri-information-line" style={{ color: "var(--color-text-tertiary)", fontSize: "14px" }}></i>
+                {activeTooltip === "pending" && (
+                  <div style={{
+                    position: "absolute",
+                    top: "20px",
+                    right: "0",
+                    backgroundColor: "var(--color-text-primary)",
+                    color: "var(--color-text-inverse)",
+                    padding: "6px 10px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    width: "180px",
+                    boxShadow: "var(--shadow-sm)",
+                    zIndex: 100,
+                    lineHeight: "1.3",
+                    fontWeight: "normal"
+                  }}>
+                    Withdrawals currently in process or awaiting admin approval.
+                  </div>
+                )}
+              </div>
+              <div className="card-icon-circle seller-color" style={{ backgroundColor: "rgba(251, 188, 5, 0.1)", color: "#FBBC05" }}><i className="ri-time-line"></i></div>
+              <div className="card-numeric-info">
+                <h3 style={{ fontSize: "1.6rem", fontWeight: "700" }}>₹{(payoutFinancials.pendingWithdrawals || 0).toLocaleString()}</h3>
+                <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>Pending/Held</p>
               </div>
             </div>
 
@@ -1911,9 +1999,27 @@ export const SellerDashboard = ({ activeTab }) => {
               <div className="radial-rating-box">
                 <h2>{user?.averageRating || 0}</h2>
                 <div className="rating-stars">
-                  {[...Array(5)].map((_, i) => (
-                    <i className={`ri-star-fill ${i < Math.round(user?.averageRating || 0) ? "text-gold" : "text-gray"}`} key={i}></i>
-                  ))}
+                  {[...Array(5)].map((_, i) => {
+                    const hasReviews = reviews.length > 0;
+                    if (!hasReviews) {
+                      return (
+                        <i 
+                          className="ri-star-line" 
+                          style={{ color: "#000" }} 
+                          key={i}
+                        ></i>
+                      );
+                    }
+                    const avgRating = user?.averageRating || 0;
+                    const isFilled = i < Math.round(avgRating);
+                    return (
+                      <i 
+                        className={isFilled ? "ri-star-fill" : "ri-star-line"} 
+                        style={{ color: isFilled ? "var(--color-brand)" : "var(--color-text-disabled)" }} 
+                        key={i}
+                      ></i>
+                    );
+                  })}
                 </div>
                 <p>Average Seller Rating ({reviews.length} reviews)</p>
               </div>
@@ -1952,10 +2058,17 @@ export const SellerDashboard = ({ activeTab }) => {
                             <span>{new Date(r.createdAt).toLocaleDateString()}</span>
                           </div>
                         </div>
-                        <div className="stars-row">
-                          {[...Array(5)].map((_, i) => (
-                            <i className={`ri-star-fill ${i < r.rating ? "text-gold" : "text-gray"}`} key={i}></i>
-                          ))}
+                        <div className="stars-row" style={{ display: "flex", gap: "3px" }}>
+                          {[...Array(5)].map((_, i) => {
+                            const isFilled = i < r.rating;
+                            return (
+                              <i 
+                                className={isFilled ? "ri-star-fill" : "ri-star-line"} 
+                                style={{ color: isFilled ? "var(--color-brand)" : "var(--color-text-disabled)" }} 
+                                key={i}
+                              ></i>
+                            );
+                          })}
                         </div>
                       </div>
                       <p className="review-body">"{r.review}"</p>
@@ -2279,7 +2392,7 @@ export const SellerDashboard = ({ activeTab }) => {
                   </div>
                 )}
               </div>
-              <div className="card-icon-circle seller-color" style={{ backgroundColor: "rgba(52, 168, 83, 0.1)", color: "#34A853" }}><i className="ri-money-dollar-circle-line"></i></div>
+              <div className="card-icon-circle seller-color" style={{ backgroundColor: "rgba(52, 168, 83, 0.1)", color: "#34A853" }}><i className="ri-money-rupee-circle-line"></i></div>
               <div className="card-numeric-info">
                 <h3 style={{ fontSize: "1.6rem", fontWeight: "700" }}>₹{payoutFinancials.grossEarnings}</h3>
                 <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>Gross Earnings</p>
