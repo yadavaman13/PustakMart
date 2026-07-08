@@ -115,6 +115,12 @@ export const Sidebar = ({
                   active={activeTab === "settings"} 
                   onClick={() => handleTabClick("settings")} 
                 />
+                <SidebarItem 
+                  label="Your Orders" 
+                  icon="ri-shopping-bag-3-line" 
+                  active={activeTab === "orders"} 
+                  onClick={() => handleTabClick("orders")} 
+                />
               </div>
             </>
           ) : (

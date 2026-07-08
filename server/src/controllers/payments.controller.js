@@ -356,3 +356,53 @@ export async function verifyPaymentController(req, res) {
     });
   }
 }
+
+/**
+ * Fetch orders (payout/payment transactions) where the authenticated user is the buyer
+ * GET /api/payments/orders
+ */
+export async function getUserOrdersController(req, res) {
+  try {
+    const buyerId = req.user._id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const skip = (page - 1) * limit;
+
+    const query = { buyer: buyerId };
+
+    // Get total count for pagination
+    const totalCount = await paymentModel.countDocuments(query);
+
+    // Get orders populated with listing and seller details
+    const orders = await paymentModel.find(query)
+      .populate({
+        path: "listing",
+        select: "title images price author category condition status"
+      })
+      .populate({
+        path: "seller",
+        select: "name email ProfilePicture collegeName"
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const hasMore = skip + orders.length < totalCount;
+
+    return res.status(200).json({
+      success: true,
+      orders,
+      page,
+      limit,
+      totalCount,
+      hasMore
+    });
+  } catch (error) {
+    console.error("Get user orders controller error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching user orders.",
+      error: error.message,
+    });
+  }
+}

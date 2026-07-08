@@ -193,3 +193,9 @@ export const getSellerTransactionsApi = async (params = {}) => {
   return response.data;
 };
 
+// 12. Buyer / User Orders API
+export const getUserOrdersApi = async (params = {}) => {
+  const response = await api.get("/payments/orders", { params });
+  return response.data;
+};
+

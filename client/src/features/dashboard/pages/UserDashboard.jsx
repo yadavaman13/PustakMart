@@ -22,7 +22,8 @@ import {
   generateCouponApi,
   createPaymentOrderApi,
   verifyPaymentApi,
-  createReviewApi
+  createReviewApi,
+  getUserOrdersApi
 } from "../services/dashboard.api.js";
 import { useSocket } from "../../shared/context/SocketContext.jsx";
 import axios from "axios";
@@ -44,6 +45,12 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
   const [savedBooks, setSavedBooks] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [chats, setChats] = useState([]);
+
+  // Orders State
+  const [orders, setOrders] = useState([]);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [hasMoreOrders, setHasMoreOrders] = useState(false);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   
 
   // Book Request creation states
@@ -116,8 +123,78 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
       fetchChatConversations();
     } else if (activeTab === "notifications") {
       fetchUserNotifications();
+    } else if (activeTab === "orders") {
+      fetchUserOrders();
     }
   }, [activeTab]);
+
+  // --- Orders API Handlers ---
+  const fetchUserOrders = async () => {
+    try {
+      setOrdersLoading(true);
+      clearAlerts();
+      setOrdersPage(1);
+      const res = await getUserOrdersApi({ page: 1, limit: 5 });
+      if (res.success) {
+        setOrders(res.orders || []);
+        setHasMoreOrders(res.hasMore);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || "Failed to load orders.");
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const loadMoreOrders = async () => {
+    try {
+      const nextPage = ordersPage + 1;
+      const res = await getUserOrdersApi({ page: nextPage, limit: 5 });
+      if (res.success) {
+        setOrders(prev => [...prev, ...(res.orders || [])]);
+        setOrdersPage(nextPage);
+        setHasMoreOrders(res.hasMore);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to load more orders.", "error");
+    }
+  };
+
+  const handleContactSellerFromOrder = async (listing, seller) => {
+    if (!listing || !seller) return;
+    try {
+      setLoading(true);
+      // Fetch fresh conversations list
+      const chatsRes = await getConversationsApi();
+      if (chatsRes.success) {
+        const conversations = chatsRes.data?.conversations || [];
+        setChats(conversations);
+        
+        // Find existing conversation matching listing
+        const existingConv = conversations.find(c => 
+          (c.listing?._id || c.listing) === (listing._id || listing)
+        );
+
+        if (existingConv) {
+          setSearchParams({ mode: "user", tab: "messages" });
+          setChatSubTab(existingConv.status === "accepted" ? "chats" : "requests");
+          handleSelectChat(existingConv);
+        } else {
+          // Fallback: start a chat using standard start chat flow
+          setIntroBook(listing);
+          setIntroMessage(`Hi, I'm contacting you regarding my order of "${listing.title}".`);
+          setShowIntroModal(true);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to initialize contact.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // --- API Fetch Handlers ---
   
@@ -1575,6 +1652,184 @@ export const UserDashboard = ({ activeTab, onNotificationsRefresh }) => {
       {activeTab === "settings" && !loading && (
         <div className="tab-view-container profile-settings-view animate-fade">
           <ProfileSettingsView showSellerStatus={true} />
+        </div>
+      )}
+
+      {/* --- 9. YOUR ORDERS VIEW --- */}
+      {activeTab === "orders" && !loading && (
+        <div className="tab-view-container user-orders-view animate-fade" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div className="feed-panel" style={{ width: "100%", padding: "20px 24px" }}>
+            <h2 className="panel-title-heading">Your Purchase Orders</h2>
+            <p className="panel-description-text" style={{ marginBottom: "20px" }}>
+              Track and view all academic books you have purchased on PustakMart.
+            </p>
+
+            <div className="orders-vertical-stack" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {orders.length > 0 ? (
+                orders.map((order) => (
+                  <div 
+                    className="order-card-box" 
+                    key={order._id}
+                    style={{
+                      backgroundColor: "var(--color-bg-surface)",
+                      border: "1px solid var(--color-border-default)",
+                      borderRadius: "12px",
+                      padding: "16px 20px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "12px",
+                      boxShadow: "var(--shadow-xs)",
+                      transition: "transform 150ms ease, box-shadow 150ms ease"
+                    }}
+                  >
+                    {/* Header Row: Order ID, Date, Status */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", borderBottom: "1px solid var(--color-border-subtle)", paddingBottom: "10px" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                        <span style={{ fontSize: "11px", fontFamily: "var(--font-mono)", color: "var(--color-text-tertiary)" }}>
+                          ORDER ID: {order.orderId || order._id}
+                        </span>
+                        <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
+                          Ordered on {new Date(order.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div>
+                        <span 
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: "500",
+                            padding: "4px 8px",
+                            borderRadius: "9999px",
+                            textTransform: "capitalize",
+                            backgroundColor: order.paymentStatus === "paid" ? "var(--color-success-bg)" : order.paymentStatus === "pending" ? "var(--color-warning-bg)" : "var(--color-error-bg)",
+                            color: order.paymentStatus === "paid" ? "var(--color-success-text)" : order.paymentStatus === "pending" ? "var(--color-warning-text)" : "var(--color-error-text)"
+                          }}
+                        >
+                          {order.paymentStatus === "paid" ? "Paid" : order.paymentStatus}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Book / Listing Info Row */}
+                    <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+                      {order.listing?.images?.[0] ? (
+                        <img 
+                          src={order.listing.images[0]} 
+                          alt={order.listing.title} 
+                          style={{
+                            width: "70px",
+                            height: "70px",
+                            borderRadius: "8px",
+                            objectFit: "cover",
+                            border: "1px solid var(--color-border-default)"
+                          }}
+                        />
+                      ) : (
+                        <div 
+                          style={{
+                            width: "70px",
+                            height: "70px",
+                            borderRadius: "8px",
+                            backgroundColor: "var(--color-bg-surface-2)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            border: "1px solid var(--color-border-default)",
+                            color: "var(--color-text-tertiary)"
+                          }}
+                        >
+                          <i className="ri-book-3-line" style={{ fontSize: "24px" }}></i>
+                        </div>
+                      )}
+
+                      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: "200px" }}>
+                        <div>
+                          <h4 style={{ margin: "0 0 4px 0", fontSize: "15px", fontWeight: "600", color: "var(--color-text-primary)" }}>
+                            {order.listing?.title || "Book Listing Removed"}
+                          </h4>
+                          {order.listing?.author && (
+                            <p style={{ margin: 0, fontSize: "13px", color: "var(--color-text-secondary)" }}>
+                              By {order.listing.author}
+                            </p>
+                          )}
+                          <p style={{ margin: "4px 0 0 0", fontSize: "11px", color: "var(--color-text-tertiary)" }}>
+                            Category: <span style={{ textTransform: "capitalize", color: "var(--color-text-secondary)", fontWeight: "500" }}>{order.listing?.category || "N/A"}</span>
+                            {" · "}
+                            Condition: <span style={{ textTransform: "capitalize", color: "var(--color-text-secondary)", fontWeight: "500" }}>{order.listing?.condition || "N/A"}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Pricing block */}
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center", minWidth: "120px" }}>
+                        <span style={{ fontSize: "16px", fontWeight: "700", color: "var(--color-text-primary)" }}>
+                          ₹{order.totalAmount}
+                        </span>
+                        {order.couponDiscount > 0 && (
+                          <span style={{ fontSize: "11px", color: "var(--color-success)", fontWeight: "500" }}>
+                            Discount: -₹{order.couponDiscount}
+                          </span>
+                        )}
+                        <span style={{ fontSize: "11px", color: "var(--color-text-tertiary)" }}>
+                          Fee: ₹{order.marketplaceFee}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Footer Row: Seller Contact */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--color-border-subtle)", paddingTop: "10px", marginTop: "4px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <img 
+                          src={order.seller?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"} 
+                          alt={order.seller?.name || "Seller"} 
+                          style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }}
+                        />
+                        <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
+                          Seller: <strong>{order.seller?.name || "User"}</strong> ({order.seller?.collegeName || "GEC Dahod"})
+                        </span>
+                      </div>
+                      
+                      {order.seller && (
+                        <button 
+                          className="btn btn-outline btn-xs"
+                          onClick={() => handleContactSellerFromOrder(order.listing, order.seller)}
+                          style={{
+                            height: "28px",
+                            padding: "0 12px",
+                            fontSize: "11px",
+                            borderRadius: "6px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px"
+                          }}
+                        >
+                          <i className="ri-chat-1-line"></i> Contact Seller
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="empty-state-mini-box" style={{ padding: "40px 20px", border: "1px dashed var(--color-border-default)", borderRadius: "12px", textAlign: "center", backgroundColor: "var(--color-bg-surface)" }}>
+                  <i className="ri-shopping-bag-3-line" style={{ fontSize: "40px", color: "var(--color-text-tertiary)", display: "block", marginBottom: "12px" }}></i>
+                  <p style={{ margin: 0, fontSize: "14px", color: "var(--color-text-secondary)" }}>
+                    You have not made any book purchases yet.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {hasMoreOrders && (
+              <div style={{ marginTop: "24px", textAlign: "center" }}>
+                <button 
+                  className="btn btn-outline btn-sm"
+                  onClick={loadMoreOrders}
+                  disabled={ordersLoading}
+                >
+                  {ordersLoading ? "Loading..." : "See More Orders"}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
