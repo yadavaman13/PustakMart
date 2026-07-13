@@ -14,6 +14,7 @@ const DashboardLayout = lazy(() => import("../features/dashboard/components/Dash
 const CategoryLandingPage = lazy(() => import("../features/home/pages/CategoryLandingPage.jsx"));
 const CheckoutPage = lazy(() => import("../features/home/pages/CheckoutPage.jsx"));
 const MarketplacePage = lazy(() => import("../features/home/pages/MarketplacePage.jsx"));
+const ProductDetailPage = lazy(() => import("../features/home/pages/ProductDetailPage.jsx"));
 
 // Reusable Loading Fallback for Suspense
 const RouteLoader = () => (
@@ -146,6 +147,12 @@ export const AppRoutes = () => {
         <Route
           path="/marketplace"
           element={<MarketplacePage />}
+        />
+
+        {/* Detailed Product/Listing Page */}
+        <Route
+          path="/product/:listingId"
+          element={<ProductDetailPage />}
         />
 
         <Route
