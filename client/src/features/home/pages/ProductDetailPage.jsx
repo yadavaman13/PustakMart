@@ -237,7 +237,6 @@ export default function ProductDetailPage() {
 
             <div className="price-section">
               <div className="price-wrapper">
-                <div className="label">Exchange Price</div>
                 <div className="price-val">₹{listing.price}</div>
               </div>
               <div className="location-tag">
