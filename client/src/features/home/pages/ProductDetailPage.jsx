@@ -179,14 +179,7 @@ export default function ProductDetailPage() {
 
       {/* Content */}
       <main className="product-detail-container" style={{ flex: 1 }}>
-        {/* Breadcrumb */}
-        <nav className="breadcrumb-nav">
-          <Link to="/">Home</Link>
-          <span className="separator">&gt;</span>
-          <Link to="/marketplace">Marketplace</Link>
-          <span className="separator">&gt;</span>
-          <span className="current">{listing.title}</span>
-        </nav>
+
 
         <div className="back-btn-wrapper">
           <button className="back-btn" onClick={() => navigate(-1)}>
