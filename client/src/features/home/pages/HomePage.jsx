@@ -632,7 +632,7 @@ export default function HomePage() {
             <div className="trending-carousel-track" ref={carouselRef}>
               {activeListings.map((book) => (
                 <div key={book._id} className="trending-book-card">
-                  <div className="img-wrapper">
+                  <Link to={`/product/${book._id}`} className="img-wrapper" style={{ display: "block", textDecoration: "none" }}>
                     <img 
                       src={book.images?.[0] || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300"} 
                       alt={book.title} 
@@ -640,10 +640,12 @@ export default function HomePage() {
                     <div className="verified-chip">
                       <i className="ri-verified-badge-fill"></i> Verified
                     </div>
-                  </div>
+                  </Link>
                   <div className="details-wrapper">
                     <p className="college">{book.collegeName || "Verified Campus"}</p>
-                    <h3 className="title">{book.title}</h3>
+                    <Link to={`/product/${book._id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                      <h3 className="title">{book.title}</h3>
+                    </Link>
                     <div className="price-box">₹{book.price}</div>
 
                     <div className="quick-actions-layer">

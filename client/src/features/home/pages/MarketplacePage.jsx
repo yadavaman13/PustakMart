@@ -392,7 +392,7 @@ export default function MarketplacePage() {
                 <div className="listings-grid">
                   {listings.map((book) => (
                     <article key={book._id} className="book-card-item">
-                      <div className="book-cover-frame">
+                      <Link to={`/product/${book._id}`} className="book-cover-frame" style={{ display: "block", cursor: "pointer" }}>
                         <img
                           src={book.images?.[0] || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300"}
                           alt={`${book.title} book by ${book.author || "student"}`}
@@ -402,7 +402,7 @@ export default function MarketplacePage() {
                         <span className={`condition-tag cond-${book.condition || "good"}`}>
                           {(book.condition || "good").replace("_", " ").toUpperCase()}
                         </span>
-                      </div>
+                      </Link>
 
                       <div className="book-card-details">
                         <div className="book-meta-top">
@@ -412,7 +412,9 @@ export default function MarketplacePage() {
                           {book.semester && <span className="book-sem-label">Sem {book.semester}</span>}
                         </div>
 
-                        <h4 className="book-title" title={book.title}>{book.title}</h4>
+                        <Link to={`/product/${book._id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                          <h4 className="book-title" title={book.title}>{book.title}</h4>
+                        </Link>
                         <p className="book-author">By {book.author || "Unknown Author"}</p>
 
                         <div className="seller-meta-strip">
