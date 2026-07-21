@@ -175,7 +175,7 @@ export default function MarketplacePage() {
   return (
     <div className="pustakmart-home-container marketplace-page-wrapper">
       <SEO
-        title="Explore Second-Hand Textbooks Marketplace | PustakMart"
+        title="Explore Second-Hand Textbooks Marketplace"
         description="Search and browse verified college listings of used textbooks, reference books, and semester bundles. Trade directly on campus at PustakMart."
       />
 

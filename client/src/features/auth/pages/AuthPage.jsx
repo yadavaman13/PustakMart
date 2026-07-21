@@ -266,7 +266,7 @@ export default function AuthPage() {
   return (
     <div className="auth-page-wrapper">
       <SEO
-        title={view === "register" ? "Student Signup" : "Student Sign In"}
+        title={view === "register" ? "Signup" : "Sign In"}
         description="Access PustakMart to buy or sell second-hand academic books directly with peer students on campus. Secure registration and OTP login."
         keywords="pustakmart login, student books signup, verify student email"
       />

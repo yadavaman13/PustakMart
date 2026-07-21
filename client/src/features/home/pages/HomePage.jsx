@@ -177,8 +177,8 @@ export default function HomePage() {
   return (
     <div className="pustakmart-home-container">
       <SEO 
-        title="Direct Campus Book Exchange" 
-        description="PustakMart is a verified student-to-student marketplace for second-hand academic books and educational resources."
+        title="PustakMart | Buy and Sell Used Books Online"
+        description="PustakMart is India's trusted platform for buying and selling second-hand academic books. Connect with students from your college or university and get the best deals on textbooks, and educational resources."
         keywords="pustakmart, buy used books, sell textbooks, college book marketplace, engineering used books, medical books exchange"
         schema={[orgSchema]}
       />
