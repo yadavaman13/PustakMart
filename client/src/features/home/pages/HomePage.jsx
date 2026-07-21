@@ -5,6 +5,7 @@ import { useHome } from "../hooks/useHome.js";
 import useAuth from "../../auth/hooks/useAuth.js";
 import SEO from "../../shared/components/SEO.jsx";
 import logoImg from "../../../assets/logo.jpg";
+import { getPublicStatsApi, getHomeBookRequestsApi } from "../services/home.api.js";
 
 // Helper Counter Component for Social Proof Section
 function Counter({ value, trigger }) {
@@ -46,9 +47,95 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   
-  // Parallax mouse state for Hero Illustration
-  const [mouseCoords, setMouseCoords] = useState({ x: 0, y: 0 });
   const [socialVisible, setSocialVisible] = useState(false);
+
+  // Dynamic statistics and book requests states
+  const [stats, setStats] = useState({
+    activeListings: 500,
+    totalUsers: 1000,
+    activeSellers: 250,
+    booksSold: 300,
+    collegesCount: 50
+  });
+  const [bookRequests, setBookRequests] = useState([]);
+
+  const fallbackRequests = [
+    {
+      _id: "fallback-req-1",
+      title: "DBMS by Korth",
+      requestedBy: { name: "Sameer" },
+      collegeName: "DTU",
+      budget: 300,
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+    },
+    {
+      _id: "fallback-req-2",
+      title: "Theory of Computation by Sipser",
+      requestedBy: { name: "Priyanka" },
+      collegeName: "IITD",
+      budget: 350,
+      createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString()
+    },
+    {
+      _id: "fallback-req-3",
+      title: "Concepts of Physics Vol 1 (H.C. Verma)",
+      requestedBy: { name: "Rahul" },
+      collegeName: "NSUT",
+      budget: 200,
+      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    }
+  ];
+
+  const getCollegeAbbreviation = (name) => {
+    if (!name) return "";
+    if (name.length <= 5) return name;
+    return name
+      .split(/\s+/)
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase();
+  };
+
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return "just now";
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    if (seconds < 60) return "just now";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} min${minutes > 1 ? "s" : ""} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hr${hours > 1 ? "s" : ""} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days > 1 ? "s" : ""} ago`;
+  };
+
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const res = await getPublicStatsApi();
+        if (res.success && res.data?.stats) {
+          setStats(res.data.stats);
+        }
+      } catch (err) {
+        console.error("Error loading stats:", err);
+      }
+    }
+
+    async function loadBookRequests() {
+      try {
+        const res = await getHomeBookRequestsApi({ status: "open" });
+        if (res.success && res.requests) {
+          setBookRequests(res.requests);
+        }
+      } catch (err) {
+        console.error("Error loading book requests:", err);
+      }
+    }
+
+    loadStats();
+    loadBookRequests();
+  }, []);
 
   // Track scrolling to shrink navbar
   useEffect(() => {
@@ -59,16 +146,7 @@ export default function HomePage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Track mouse coordinates for Hero Parallax
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      const x = (e.clientX / window.innerWidth - 0.5) * 2;
-      const y = (e.clientY / window.innerHeight - 0.5) * 2;
-      setMouseCoords({ x, y });
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
+
 
   // Fetch listings on mount
   useEffect(() => {
@@ -336,116 +414,6 @@ export default function HomePage() {
               </div>
             </div>
           </motion.div>
-
-          <div className="hero-right">
-            <div className="illustration-deck">
-              {/* DBMS Float Card */}
-              <motion.div 
-                className="float-card deck-dbms"
-                drag
-                dragConstraints={{ left: -30, right: 30, top: -30, bottom: 30 }}
-                animate={{
-                  x: mouseCoords.x * 12,
-                  y: mouseCoords.y * 12,
-                }}
-                transition={{ type: "spring", stiffness: 100, damping: 25 }}
-              >
-                <p className="subject-title">Semester 5</p>
-                <p className="book-name">DBMS</p>
-                <p className="price">₹350</p>
-              </motion.div>
-
-              {/* OS Float Card */}
-              <motion.div 
-                className="float-card deck-os"
-                drag
-                dragConstraints={{ left: -30, right: 30, top: -30, bottom: 30 }}
-                animate={{
-                  x: mouseCoords.x * -16,
-                  y: mouseCoords.y * -16,
-                }}
-                transition={{ type: "spring", stiffness: 100, damping: 25 }}
-              >
-                <p className="subject-title">Semester 4</p>
-                <p className="book-name">Operating Systems</p>
-                <p className="price">₹300</p>
-              </motion.div>
-
-              {/* CN Float Card */}
-              <motion.div 
-                className="float-card deck-cn"
-                drag
-                dragConstraints={{ left: -30, right: 30, top: -30, bottom: 30 }}
-                animate={{
-                  x: mouseCoords.x * 18,
-                  y: mouseCoords.y * 18,
-                }}
-                transition={{ type: "spring", stiffness: 100, damping: 25 }}
-              >
-                <p className="subject-title">Semester 6</p>
-                <p className="book-name">Computer Networks</p>
-                <p className="price">₹400</p>
-              </motion.div>
-
-              {/* TOC Float Card */}
-              <motion.div 
-                className="float-card deck-toc"
-                drag
-                dragConstraints={{ left: -30, right: 30, top: -30, bottom: 30 }}
-                animate={{
-                  x: mouseCoords.x * -10,
-                  y: mouseCoords.y * -10,
-                }}
-                transition={{ type: "spring", stiffness: 100, damping: 25 }}
-              >
-                <p className="subject-title">Semester 5</p>
-                <p className="book-name">T.O.C.</p>
-                <p className="price">₹320</p>
-              </motion.div>
-
-              {/* Semester Bundle Card */}
-              <motion.div 
-                className="float-card deck-bundle"
-                animate={{
-                  x: mouseCoords.x * -8,
-                  y: mouseCoords.y * 14,
-                }}
-                transition={{ type: "spring", stiffness: 80, damping: 20 }}
-              >
-                <p className="title">Semester 5 Bundle</p>
-                <p className="desc">Save ₹800 instantly</p>
-              </motion.div>
-
-              {/* Verified Seller Card */}
-              <motion.div 
-                className="float-card deck-verified"
-                animate={{
-                  x: mouseCoords.x * 15,
-                  y: mouseCoords.y * -12,
-                }}
-                transition={{ type: "spring", stiffness: 90, damping: 22 }}
-              >
-                <i className="ri-verified-badge-fill"></i>
-                <div className="details">
-                  <h5>Verified Seller</h5>
-                  <p>Delhi Tech Univ (DTU)</p>
-                </div>
-              </motion.div>
-
-              {/* Book Request Card */}
-              <motion.div 
-                className="float-card deck-request"
-                animate={{
-                  x: mouseCoords.x * -14,
-                  y: mouseCoords.y * -8,
-                }}
-                transition={{ type: "spring", stiffness: 80, damping: 24 }}
-              >
-                <div className="req-badge"></div>
-                <span style={{ fontSize: "12px", fontWeight: "600" }}>Request: DBMS Korth</span>
-              </motion.div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -466,25 +434,31 @@ export default function HomePage() {
           <div className="metrics-grid">
             <div className="metric-item">
               <div className="number">
-                <Counter value={500} trigger={socialVisible} />+
+                <Counter value={stats.activeListings} trigger={socialVisible} />+
               </div>
               <div className="label">Listings</div>
             </div>
             <div className="metric-item">
               <div className="number">
-                <Counter value={1000} trigger={socialVisible} />+
+                <Counter value={stats.totalUsers} trigger={socialVisible} />+
               </div>
               <div className="label">Students</div>
             </div>
             <div className="metric-item">
               <div className="number">
-                <Counter value={300} trigger={socialVisible} />+
+                <Counter value={stats.activeSellers} trigger={socialVisible} />+
+              </div>
+              <div className="label">Sellers</div>
+            </div>
+            <div className="metric-item">
+              <div className="number">
+                <Counter value={stats.booksSold} trigger={socialVisible} />+
               </div>
               <div className="label">Exchanges</div>
             </div>
             <div className="metric-item">
               <div className="number">
-                <Counter value={50} trigger={socialVisible} />+
+                <Counter value={stats.collegesCount} trigger={socialVisible} />+
               </div>
               <div className="label">Colleges</div>
             </div>
@@ -632,7 +606,7 @@ export default function HomePage() {
             <div className="trending-carousel-track" ref={carouselRef}>
               {activeListings.map((book) => (
                 <div key={book._id} className="trending-book-card">
-                  <Link to={`/product/${book._id}`} className="img-wrapper" style={{ display: "block", textDecoration: "none" }}>
+                  <Link to={`/product/${book._id}`} className="img-wrapper" style={{ display: "flex", textDecoration: "none" }}>
                     <img 
                       src={book.images?.[0] || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300"} 
                       alt={book.title} 
@@ -820,47 +794,22 @@ export default function HomePage() {
 
           <div className="request-cards-side">
             <div className="request-scroll-track">
-              {/* Mock request cards sliding (repeated to scroll indefinitely) */}
-              <div className="mock-request-card">
-                <div className="req-info">
-                  <h4>DBMS by Korth</h4>
-                  <p>Requested by Sameer (DTU) • 2 hrs ago</p>
-                </div>
-                <div className="req-budget">₹300</div>
-              </div>
-
-              <div className="mock-request-card">
-                <div className="req-info">
-                  <h4>Theory of Computation by Sipser</h4>
-                  <p>Requested by Priyanka (IITD) • 5 hrs ago</p>
-                </div>
-                <div className="req-budget">₹350</div>
-              </div>
-
-              <div className="mock-request-card">
-                <div className="req-info">
-                  <h4>Concepts of Physics Vol 1 (H.C. Verma)</h4>
-                  <p>Requested by Rahul (NSUT) • 1 day ago</p>
-                </div>
-                <div className="req-budget">₹200</div>
-              </div>
-
-              {/* Repetition for continuous loop */}
-              <div className="mock-request-card">
-                <div className="req-info">
-                  <h4>DBMS by Korth</h4>
-                  <p>Requested by Sameer (DTU) • 2 hrs ago</p>
-                </div>
-                <div className="req-budget">₹300</div>
-              </div>
-
-              <div className="mock-request-card">
-                <div className="req-info">
-                  <h4>Theory of Computation by Sipser</h4>
-                  <p>Requested by Priyanka (IITD) • 5 hrs ago</p>
-                </div>
-                <div className="req-budget">₹350</div>
-              </div>
+              {(() => {
+                const activeRequests = bookRequests.length > 0 ? bookRequests.slice(0, 5) : fallbackRequests;
+                const requestsToRender = [...activeRequests, ...activeRequests];
+                return requestsToRender.map((req, idx) => (
+                  <div key={`${req._id}-${idx}`} className="mock-request-card">
+                    <div className="req-info">
+                      <h4>{req.title}</h4>
+                      <p>
+                        Requested by {req.requestedBy?.name || "Student"} 
+                        {req.collegeName ? ` (${getCollegeAbbreviation(req.collegeName)})` : ""} • {formatTimeAgo(req.createdAt)}
+                      </p>
+                    </div>
+                    <div className="req-budget">₹{req.budget !== undefined ? req.budget : "N/A"}</div>
+                  </div>
+                ));
+              })()}
             </div>
           </div>
         </div>

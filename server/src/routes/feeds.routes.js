@@ -1,5 +1,5 @@
 import expressRouter from "express";
-import { getHomeFeedController } from "../controllers/feeds.controller.js";
+import { getHomeFeedController, getPublicStatsController } from "../controllers/feeds.controller.js";
 import { optionalAuth } from "../middlewares/auth.middleware.js";
 
 export const feedRoute = expressRouter();
@@ -10,3 +10,10 @@ export const feedRoute = expressRouter();
  * @access public (uses optionalAuth to customize if logged in)
  */
 feedRoute.get("/home", optionalAuth, getHomeFeedController);
+
+/**
+ * @route GET /api/feeds/stats
+ * @description Fetch public marketplace statistics
+ * @access public
+ */
+feedRoute.get("/stats", getPublicStatsController);

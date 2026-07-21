@@ -1,4 +1,6 @@
 import { listingModel } from "../models/listing.model.js";
+import { userModel } from "../models/user.model.js";
+import { bookRequestModel } from "../models/bookrequest.model.js";
 
 // Retrieve the aggregated Home Feed
 export async function getHomeFeedController(req, res) {
@@ -83,6 +85,42 @@ export async function getHomeFeedController(req, res) {
       success: false,
       message: "Error loading home feed",
       error: error.message,
+    });
+  }
+}
+
+// Retrieve public statistics for the marketplace
+export async function getPublicStatsController(req, res) {
+  try {
+    const [totalUsers, activeSellers, activeListings, booksSold, uniqueColleges] = await Promise.all([
+      userModel.countDocuments({ isDeleted: false }),
+      userModel.countDocuments({ sellerStatus: "verified", isDeleted: false }),
+      listingModel.countDocuments({ status: "active" }),
+      listingModel.countDocuments({ status: "sold" }),
+      userModel.distinct("collegeName", { isDeleted: false })
+    ]);
+
+    const collegesCount = uniqueColleges.filter(Boolean).length;
+
+    res.status(200).json({
+      success: true,
+      message: "Public statistics retrieved successfully",
+      data: {
+        stats: {
+          totalUsers,
+          activeSellers,
+          activeListings,
+          booksSold,
+          collegesCount: collegesCount || 0
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Get public stats error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving public statistics",
+      error: error.message
     });
   }
 }

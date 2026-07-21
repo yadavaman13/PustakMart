@@ -26,3 +26,15 @@ export const getSellerReviewsApi = async (sellerId) => {
   const response = await api.get(`/reviews/${sellerId}`);
   return response.data;
 };
+
+// Get public marketplace statistics (listings count, student count, seller count, exchanges, colleges)
+export const getPublicStatsApi = async () => {
+  const response = await api.get("/feeds/stats");
+  return response.data;
+};
+
+// Get public open book requests
+export const getHomeBookRequestsApi = async (params = {}) => {
+  const response = await api.get("/requests", { params });
+  return response.data;
+};
