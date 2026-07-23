@@ -10,6 +10,7 @@ import { sendOtpEmail } from "../services/email/otp.service.js";
 import { notificationModel } from "../models/notification.model.js";
 import { emitToUser } from "../sockets/server.socket.js";
 
+
 // Helper to check and increment hourly send limits
 async function checkAndIncrementOtpSendLimit(email, res) {
   let sendCount = await redis.get(`otp-send-count:${email}`);
@@ -222,6 +223,7 @@ export async function registerVerifyOtpController(req, res) {
   }
 }
 
+//TODO: 23/7/26 - setup the resend email service in all the controllers and study all the controllers.
 // 3. Resend Registration OTP
 export async function registerResendOtpController(req, res) {
   try {

@@ -1,4 +1,4 @@
-import sendEmail from "./email.service.js";
+import sendEmail from "./resend.mail.service.js";
 import { getOtpHtml } from "../../utils/otp.util.js";
 
 /**

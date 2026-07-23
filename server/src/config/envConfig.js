@@ -24,6 +24,10 @@ if (!process.env.IMAGEKIT_PRIVATE_KEY) {
     throw new Error('MISSING ENVIRONMENT VARIABLE: IMAGEKIT_PRIVATE_KEY');
 }
 
+if (!process.env.RESEND_API_KEY) {
+    throw new Error('MISSING ENVIRONMENT VARIABLE: RESEND_API_KEY');
+}
+
 // Client Origins config
 const clientOriginsEnv = process.env.CLIENT_ORIGINS || process.env.ALLOWED_CLIENT_ORIGIN || '*';
 const clientOrigins = clientOriginsEnv
@@ -70,6 +74,9 @@ const envConfig = {
     CLIENT_SECRET: process.env.CLIENT_SECRET,
     REFRESH_TOKEN: process.env.REFRESH_TOKEN,
     EMAIL_USER: process.env.EMAIL_USER,
+
+    // Resend configuration
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
 
     // ImageKit configuration
     IMAGEKIT_PUBLIC_KEY: process.env.IMAGEKIT_PUBLIC_KEY || null,
