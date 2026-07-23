@@ -181,8 +181,7 @@ export default function VerifyEmailPage() {
             )}
 
             <button className="btn-primary" type="submit" disabled={loading}>
-              {loading && <div className="btn-spinner"></div>}
-              Verify Code & Register
+              {loading ? <div className="btn-spinner"></div> : "Verify Code & Register"}
             </button>
           </form>
 

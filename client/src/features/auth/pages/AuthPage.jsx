@@ -364,8 +364,7 @@ export default function AuthPage() {
             </a>
 
             <button className="btn-primary" type="submit" disabled={loading}>
-              {loading && <div className="btn-spinner"></div>}
-              Sign In
+              {loading ? <div className="btn-spinner"></div> : "Sign In"}
             </button>
           </form>
         )}
@@ -477,8 +476,7 @@ export default function AuthPage() {
             </div>
 
             <button className="btn-primary" type="submit" disabled={loading}>
-              {loading && <div className="btn-spinner"></div>}
-              Register & Send OTP
+              {loading ? <div className="btn-spinner"></div> : "Register & Send OTP"}
             </button>
           </form>
         )}
@@ -498,8 +496,7 @@ export default function AuthPage() {
             </div>
 
             <button className="btn-primary" type="submit" disabled={loading}>
-              {loading && <div className="btn-spinner"></div>}
-              Send Recovery Code
+              {loading ? <div className="btn-spinner"></div> : "Send Recovery Code"}
             </button>
 
             <div style={{ textAlign: "center", marginTop: "20px" }}>
@@ -542,8 +539,7 @@ export default function AuthPage() {
               )}
 
               <button className="btn-primary" type="submit" disabled={loading}>
-                {loading && <div className="btn-spinner"></div>}
-                Verify Code
+                {loading ? <div className="btn-spinner"></div> : "Verify Code"}
               </button>
             </form>
 
