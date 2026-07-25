@@ -256,13 +256,13 @@
     }
 
     .btn-login {
-      font-size: #{$text-sm};
+      font-size: #{$text-base};
       font-weight: 600;
       color: var(--color-text-primary);
       background: none;
       border: none;
       cursor: pointer;
-      padding: 8px #{$space-3};
+      padding: 10px 20px;
       transition: color 0.2s ease;
 
       &:hover {
@@ -273,10 +273,10 @@
     .btn-signup {
       background-color: var(--color-text-primary);
       color: var(--color-text-inverse);
-      font-size: #{$text-sm};
+      font-size: #{$text-base};
       font-weight: 600;
-      padding: 8px #{$space-4};
-      border-radius: #{$radius-md};
+      padding: 10px 24px;
+      border-radius: #{$radius-lg};
       border: none;
       cursor: pointer;
       transition: background-color 0.2s ease, transform 0.2s ease;
