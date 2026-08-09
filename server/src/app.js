@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import cors from "cors";
 import envConfig from "./config/envConfig.js";
+import path from 'path';
 
 // Import routers
 import { authRoute } from "./routes/auth.routes.js";
@@ -29,14 +30,14 @@ import { authUser } from "./middlewares/auth.middleware.js";
 
 const app = express();
 
-// Express CORS Configuration
+
+app.use(express.static(path.join(import.meta.dirname, "public")))
 app.use(
   cors({
     origin: envConfig.isAllowedClientOrigin,
     credentials: true,
   })
 );
-
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan("dev"));

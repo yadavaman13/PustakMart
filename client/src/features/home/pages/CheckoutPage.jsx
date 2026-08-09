@@ -3,10 +3,9 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import useAuth from "../../auth/hooks/useAuth.js";
 import SEO from "../../shared/components/SEO.jsx";
 import axios from "axios";
-import { API_BASE_URL } from "../../../app/runtime.config.js";
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: '/api',
   withCredentials: true,
 });
 

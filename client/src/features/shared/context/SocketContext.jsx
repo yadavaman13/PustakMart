@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
-import { SOCKET_URL } from "../../../app/runtime.config.js";
 import { AuthContext } from "../../auth/context/AuthContext.jsx";
 
 const SocketContext = createContext(null);
@@ -18,11 +17,10 @@ export const SocketProvider = ({ children }) => {
       return;
     }
 
-    console.log("Initializing Socket.io connection to:", SOCKET_URL);
-    const newSocket = io(SOCKET_URL, {
+    console.log("Initializing Socket.io connection");
+
+    const newSocket = io({
       withCredentials: true,
-      autoConnect: true,
-      transports: ["websocket", "polling"],
     });
 
     newSocket.on("connect", () => {
