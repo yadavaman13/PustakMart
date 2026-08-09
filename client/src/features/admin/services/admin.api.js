@@ -108,3 +108,20 @@ export const completeWithdrawalApi = async (id, data) => {
   return response.data;
 };
 
+/**
+ * Fetch the current maintenance status and history log for the admin dashboard.
+ */
+export const getMaintenanceStatusApi = async () => {
+  const response = await api.get("/admin/system/maintenance");
+  return response.data;
+};
+
+/**
+ * Update the maintenance configuration.
+ * @param {object} data - { enabled: boolean, message: string }
+ */
+export const updateMaintenanceStatusApi = async (data) => {
+  const response = await api.patch("/admin/system/maintenance", data);
+  return response.data;
+};
+

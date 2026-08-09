@@ -2,6 +2,11 @@ import { userModel } from "../models/user.model.js";
 import { listingModel } from "../models/listing.model.js";
 import { reportModel } from "../models/report.model.js";
 import { bookRequestModel } from "../models/bookrequest.model.js";
+import {
+  getMaintenanceStatus,
+  setMaintenanceStatus,
+  getMaintenanceHistory
+} from "../services/maintenance.service.js";
 
 // Fetch aggregated marketplace analytics
 export async function getAdminAnalyticsController(req, res) {
@@ -139,6 +144,67 @@ export async function adminResolveReportController(req, res) {
     res.status(500).json({
       success: false,
       message: "Error moderating report",
+    });
+  }
+}
+
+// Fetch current maintenance status and history log for admin dashboard
+export async function adminGetMaintenanceController(req, res) {
+  try {
+    const status = await getMaintenanceStatus();
+    const history = await getMaintenanceHistory();
+
+    return res.status(200).json({
+      success: true,
+      message: "Maintenance configurations fetched successfully",
+      data: {
+        maintenance: status,
+        history
+      }
+    });
+  } catch (error) {
+    console.error("Admin get maintenance error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve maintenance configuration"
+    });
+  }
+}
+
+// Toggle/Update maintenance mode
+export async function adminUpdateMaintenanceController(req, res) {
+  try {
+    const { enabled, message } = req.body;
+
+    if (enabled === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "The 'enabled' field (boolean) is required"
+      });
+    }
+
+    const updatedStatus = await setMaintenanceStatus(
+      !!enabled,
+      message
+    );
+
+    const history = await getMaintenanceHistory();
+
+    return res.status(200).json({
+      success: true,
+      message: enabled
+        ? "Maintenance mode enabled successfully. Users will see the warning barrier page."
+        : "Maintenance mode disabled. PustakMart is back online.",
+      data: {
+        maintenance: updatedStatus,
+        history
+      }
+    });
+  } catch (error) {
+    console.error("Admin update maintenance error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update maintenance configuration"
     });
   }
 }

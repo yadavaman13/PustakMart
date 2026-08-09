@@ -13,7 +13,9 @@ import {
   approveWithdrawalApi,
   rejectWithdrawalApi,
   processingWithdrawalApi,
-  completeWithdrawalApi
+  completeWithdrawalApi,
+  getMaintenanceStatusApi,
+  updateMaintenanceStatusApi
 } from "../services/admin.api.js";
 
 export function useAdmin() {
@@ -26,6 +28,8 @@ export function useAdmin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [maintenanceInfo, setMaintenanceInfo] = useState(null);
+  const [maintenanceLogs, setMaintenanceLogs] = useState([]);
 
   const clearMessages = useCallback(() => {
     setError("");
@@ -278,6 +282,44 @@ export function useAdmin() {
     }
   }, [fetchWithdrawals, fetchAnalytics]);
 
+  const fetchMaintenanceInfo = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await getMaintenanceStatusApi();
+      if (res.success && res.data) {
+        setMaintenanceInfo(res.data.maintenance || null);
+        setMaintenanceLogs(res.data.history || []);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || "Failed to load maintenance status.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const updateMaintenanceInfo = useCallback(async (enabled, message) => {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await updateMaintenanceStatusApi({ enabled, message });
+      if (res.success && res.data) {
+        setMaintenanceInfo(res.data.maintenance);
+        setMaintenanceLogs(res.data.history || []);
+        setSuccess(res.message || "Maintenance status updated successfully.");
+        return { success: true };
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || "Failed to update maintenance status.");
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -289,6 +331,7 @@ export function useAdmin() {
         fetchListings(),
         fetchReports(),
         fetchWithdrawals(),
+        fetchMaintenanceInfo(),
       ]);
     } catch (err) {
       console.error("Error fetching all data:", err);
@@ -296,7 +339,7 @@ export function useAdmin() {
     } finally {
       setLoading(false);
     }
-  }, [fetchAnalytics, fetchUsers, fetchPendingSellers, fetchListings, fetchReports, fetchWithdrawals]);
+  }, [fetchAnalytics, fetchUsers, fetchPendingSellers, fetchListings, fetchReports, fetchWithdrawals, fetchMaintenanceInfo]);
 
   return {
     analytics,
@@ -305,6 +348,8 @@ export function useAdmin() {
     listings,
     reports,
     withdrawals,
+    maintenanceInfo,
+    maintenanceLogs,
     loading,
     error,
     success,
@@ -315,6 +360,8 @@ export function useAdmin() {
     fetchListings,
     fetchReports,
     fetchWithdrawals,
+    fetchMaintenanceInfo,
+    updateMaintenanceInfo,
     verifySeller,
     updateUserStatus,
     resolveReport,

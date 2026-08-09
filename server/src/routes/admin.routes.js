@@ -4,7 +4,9 @@ import {
   adminGetUsersController,
   adminGetListingsController,
   adminGetReportsController,
-  adminResolveReportController
+  adminResolveReportController,
+  adminGetMaintenanceController,
+  adminUpdateMaintenanceController
 } from "../controllers/admin.controller.js";
 import { authUser, isAdmin } from "../middlewares/auth.middleware.js";
 
@@ -47,3 +49,18 @@ adminRoute.get("/reports", adminGetReportsController);
  * @access private (Admin only)
  */
 adminRoute.patch("/reports/:id", adminResolveReportController);
+
+/**
+ * @route GET /api/admin/system/maintenance
+ * @description Get maintenance configuration and history logs
+ * @access private (Admin only)
+ */
+adminRoute.get("/system/maintenance", adminGetMaintenanceController);
+
+/**
+ * @route PATCH /api/admin/system/maintenance
+ * @description Update maintenance configuration (enabled, message)
+ * @access private (Admin only)
+ */
+adminRoute.patch("/system/maintenance", adminUpdateMaintenanceController);
+

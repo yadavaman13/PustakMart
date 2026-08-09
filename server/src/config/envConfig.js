@@ -28,6 +28,10 @@ if (!process.env.RESEND_API_KEY) {
     throw new Error('MISSING ENVIRONMENT VARIABLE: RESEND_API_KEY');
 }
 
+if(!process.env.SENTRY_DSN){
+    throw new Error('MISSING ENVIRONMENT VARIABLE: SENTRY_DSN')
+}
+
 // Client Origins config
 const clientOriginsEnv = process.env.CLIENT_ORIGINS || process.env.ALLOWED_CLIENT_ORIGIN || '*';
 const clientOrigins = clientOriginsEnv

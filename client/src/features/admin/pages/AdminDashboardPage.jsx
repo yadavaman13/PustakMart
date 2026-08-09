@@ -20,6 +20,8 @@ export default function AdminDashboardPage() {
     listings,
     reports,
     withdrawals,
+    maintenanceInfo,
+    maintenanceLogs,
     loading,
     error,
     success,
@@ -31,13 +33,66 @@ export default function AdminDashboardPage() {
     rejectWithdrawal,
     processWithdrawal,
     completeWithdrawal,
+    updateMaintenanceInfo,
     fetchAllData,
   } = useAdmin();
 
-  // Active view: 'overview' | 'users' | 'listings' | 'reports' | 'payout-requests'
+  // Active view: 'overview' | 'users' | 'listings' | 'reports' | 'payout-requests' | 'system-controls'
   const [activeTab, setActiveTab] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  
+  // System Controls state
+  const [maintenanceMessage, setMaintenanceMessage] = useState("");
+  const [isConfirmingMaintenance, setIsConfirmingMaintenance] = useState(false);
+
+  useEffect(() => {
+    if (maintenanceInfo) {
+      setMaintenanceMessage(maintenanceInfo.message || "");
+    }
+  }, [maintenanceInfo]);
+
+  const handleToggleMaintenance = async () => {
+    const nextState = !maintenanceInfo?.enabled;
+    const ok = await updateMaintenanceInfo(nextState, maintenanceMessage);
+    if (ok && ok.success) {
+      setIsConfirmingMaintenance(false);
+    }
+  };
+
+  const formatDuration = (start, end) => {
+    if (!start || !end) return "N/A";
+    try {
+      const s = new Date(start);
+      const e = new Date(end);
+      const diffMs = e - s;
+      if (diffMs < 0) return "0m";
+      const diffMins = Math.round(diffMs / 60000);
+      if (diffMins < 60) return `${diffMins}m`;
+      const diffHours = Math.floor(diffMins / 60);
+      const remMins = diffMins % 60;
+      return `${diffHours}h ${remMins}m`;
+    } catch (err) {
+      return "N/A";
+    }
+  };
+
+  const formatDateTime = (isoString) => {
+    if (!isoString) return "N/A";
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch (e) {
+      return "N/A";
+    }
+  };
   
   // Withdrawal request modal review state
   const [reviewWithdrawal, setReviewWithdrawal] = useState(null);
@@ -223,6 +278,14 @@ export default function AdminDashboardPage() {
                 {withdrawals.filter(w => w.status === "pending").length}
               </span>
             )}
+          </button>
+
+          <button 
+            className={`menu-item ${activeTab === "system-controls" ? "active" : ""}`}
+            onClick={() => handleTabChange("system-controls")}
+          >
+            <i className="ri-settings-4-line"></i>
+            <span>System Controls</span>
           </button>
         </nav>
 
@@ -824,6 +887,166 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
+          {/* TAB 6: SYSTEM CONTROLS & MAINTENANCE */}
+          {activeTab === "system-controls" && (
+            <div className="admin-management-tab">
+              <div className="tab-title-header">
+                <h1>System Controls</h1>
+                <p>Manage application-level operations, toggle maintenance mode, customize user warnings, and view logs.</p>
+              </div>
+
+              <div className="dashboard-content-split">
+                {/* Current Mode Status Controls */}
+                <div className="split-column card-block" style={{ flex: "1.2" }}>
+                  <div className="block-header">
+                    <h3>Maintenance Mode Panel</h3>
+                  </div>
+                  <div className="block-body" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                    
+                    <div className="system-status-indicator-box" style={{ 
+                      padding: "20px", 
+                      borderRadius: "12px", 
+                      backgroundColor: maintenanceInfo?.enabled ? "rgba(220, 38, 38, 0.08)" : "rgba(22, 163, 74, 0.08)", 
+                      border: `1px solid ${maintenanceInfo?.enabled ? "rgba(220, 38, 38, 0.2)" : "rgba(22, 163, 74, 0.2)"}`,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "16px"
+                    }}>
+                      <div className="status-pulse-light">
+                        <span className={`status-dot ${maintenanceInfo?.enabled ? "red-pulse" : "green-pulse"}`}></span>
+                      </div>
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: "1.1rem", color: maintenanceInfo?.enabled ? "#ef4444" : "#22c55e", fontWeight: "600" }}>
+                          {maintenanceInfo?.enabled ? "Maintenance Mode Active" : "System Operational (Online)"}
+                        </h4>
+                        <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+                          {maintenanceInfo?.enabled 
+                            ? `Blocked since ${formatDateTime(maintenanceInfo.startedAt)}` 
+                            : "Normal user access and payment checkouts are enabled."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="maintenance-form-group" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <label htmlFor="maintenance-msg" style={{ fontSize: "0.9rem", fontWeight: "600", color: "var(--color-text-primary)" }}>
+                        User Maintenance Warning Message
+                      </label>
+                      <textarea
+                        id="maintenance-msg"
+                        rows="3"
+                        placeholder="Write a custom warning message for users visiting during maintenance..."
+                        value={maintenanceMessage}
+                        onChange={(e) => setMaintenanceMessage(e.target.value)}
+                        style={{ 
+                          width: "100%", 
+                          padding: "12px", 
+                          borderRadius: "8px", 
+                          border: "1px solid var(--color-border-medium)", 
+                          backgroundColor: "var(--color-bg-surface-2)",
+                          color: "var(--color-text-primary)",
+                          fontFamily: "inherit",
+                          resize: "none"
+                        }}
+                      />
+                      <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--color-text-tertiary)" }}>
+                        This text will be dynamically fetched and displayed on the warning barrier page.
+                      </p>
+                    </div>
+
+                    <div style={{ marginTop: "10px" }}>
+                      {maintenanceInfo?.enabled ? (
+                        <button
+                          className="btn-danger"
+                          onClick={() => setIsConfirmingMaintenance(true)}
+                          style={{ maxWidth: "250px", backgroundColor: "#16a34a", borderColor: "#16a34a", color: "#fff" }}
+                        >
+                          Disable Maintenance Mode
+                        </button>
+                      ) : (
+                        <button
+                          className="btn-danger"
+                          onClick={() => setIsConfirmingMaintenance(true)}
+                          style={{ maxWidth: "250px", backgroundColor: "#f59e0b", borderColor: "#f59e0b", color: "#171717" }}
+                        >
+                          Enable Maintenance Mode
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Explanatory Info Panel */}
+                <div className="split-column card-block" style={{ flex: "0.8" }}>
+                  <div className="block-header">
+                    <h3>Understanding Maintenance</h3>
+                  </div>
+                  <div className="block-body" style={{ fontSize: "0.88rem", color: "var(--color-text-secondary)", lineHeight: "1.6" }}>
+                    <p style={{ marginBottom: "12px" }}>
+                      Enabling Maintenance Mode suspends normal student marketplace interactions.
+                    </p>
+                    <ul style={{ paddingLeft: "20px", marginBottom: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <li>
+                        <strong>User Blocking:</strong> All normal requests to listings, requests, chats, and checkout API paths return a <code>503 Service Unavailable</code>.
+                      </li>
+                      <li>
+                        <strong>Admin Bypass:</strong> Logged-in admin profiles bypass the warning screen and API block to perform validations or audits.
+                      </li>
+                      <li>
+                        <strong>Fail-Safe:</strong> If Redis loses connectivity, maintenance checks fail open to prevent bringing down the web service.
+                      </li>
+                    </ul>
+                    <div style={{ padding: "12px", borderLeft: "4px solid var(--color-brand)", backgroundColor: "var(--color-brand-light)", borderRadius: "0 8px 8px 0" }}>
+                      <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--color-brand-text)", fontWeight: "500" }}>
+                        <strong>Note:</strong> Render web service processes are ephemeral. Using Redis for this flag ensures setting persistency across server restarts.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Maintenance History Log Section */}
+              <div className="admin-table-card" style={{ marginTop: "30px" }}>
+                <div className="block-header" style={{ padding: "20px 24px 10px" }}>
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: "700" }}>Maintenance Operations Logs</h3>
+                </div>
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Started At</th>
+                      <th>Ended At</th>
+                      <th>Duration</th>
+                      <th>Custom Warning Message</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {maintenanceLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" style={{ textAlign: "center" }} className="empty-lbl">
+                          No historical maintenance logs found.
+                        </td>
+                      </tr>
+                    ) : (
+                      maintenanceLogs.map((log, index) => (
+                        <tr key={index}>
+                          <td>{formatDateTime(log.startedAt)}</td>
+                          <td>{formatDateTime(log.endedAt)}</td>
+                          <td>
+                            <span className="badge-pill bg-grey" style={{ fontWeight: "600" }}>
+                              {formatDuration(log.startedAt, log.endedAt)}
+                            </span>
+                          </td>
+                          <td style={{ maxWidth: "300px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {log.message}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
         </main>
       </div>
 
@@ -1093,6 +1316,72 @@ export default function AdminDashboardPage() {
                   Mark Completed
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. CONFIRMATION DIALOG: TOGGLE MAINTENANCE MODE */}
+      {isConfirmingMaintenance && (
+        <div className="admin-modal-backdrop" onClick={() => setIsConfirmingMaintenance(false)}>
+          <div className="admin-modal-card" style={{ maxWidth: "450px" }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Confirm Maintenance Toggle</h3>
+              <button className="btn-close" onClick={() => setIsConfirmingMaintenance(false)}>×</button>
+            </div>
+            
+            <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ 
+                width: "48px", 
+                height: "48px", 
+                borderRadius: "50%", 
+                backgroundColor: maintenanceInfo?.enabled ? "rgba(22, 163, 74, 0.1)" : "rgba(245, 158, 11, 0.1)",
+                color: maintenanceInfo?.enabled ? "#22c55e" : "#f59e0b",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "24px",
+                margin: "0 auto"
+              }}>
+                <i className={maintenanceInfo?.enabled ? "ri-checkbox-circle-line" : "ri-error-warning-line"}></i>
+              </div>
+
+              <div style={{ textAlign: "center" }}>
+                <h4 style={{ margin: "0 0 8px 0", fontSize: "1.1rem" }}>
+                  {maintenanceInfo?.enabled ? "Disable Maintenance Mode?" : "Enable Maintenance Mode?"}
+                </h4>
+                <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--color-text-secondary)", lineHeight: "1.5" }}>
+                  {maintenanceInfo?.enabled
+                    ? "This will restore standard user access immediately. Normal listing browsing, chatting, and payment checkouts will resume."
+                    : "This will temporarily prevent students from accessing the marketplace. Users will see a warning page showing your custom message."}
+                </p>
+              </div>
+            </div>
+
+            <div className="modal-footer" style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "16px" }}>
+              <button 
+                className="btn-modal btn-cancel" 
+                onClick={() => setIsConfirmingMaintenance(false)}
+                style={{ padding: "8px 16px", borderRadius: "6px", border: "1px solid var(--color-border-medium)", background: "transparent" }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn-modal" 
+                disabled={loading}
+                onClick={handleToggleMaintenance}
+                style={{ 
+                  backgroundColor: maintenanceInfo?.enabled ? "#16a34a" : "#f59e0b", 
+                  color: maintenanceInfo?.enabled ? "#fff" : "#171717", 
+                  border: "none", 
+                  padding: "8px 16px", 
+                  borderRadius: "6px",
+                  fontWeight: "600",
+                  cursor: "pointer"
+                }}
+              >
+                {maintenanceInfo?.enabled ? "Disable Mode" : "Enable Mode"}
+              </button>
             </div>
           </div>
         </div>

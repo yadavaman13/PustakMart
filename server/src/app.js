@@ -4,6 +4,7 @@ import morgan from "morgan";
 import cors from "cors";
 import envConfig from "./config/envConfig.js";
 import path from 'path';
+import * as Sentry from "@sentry/node";
 
 // Import routers
 import { authRoute } from "./routes/auth.routes.js";
@@ -25,7 +26,9 @@ import { payoutRoute } from "./routes/payout.routes.js";
 import { withdrawalRoute } from "./routes/withdrawal.routes.js";
 import { adminWithdrawalRoute } from "./routes/adminWithdrawal.routes.js";
 import { getSellerTransactionsController } from "./controllers/withdrawal.controller.js";
-import { authUser } from "./middlewares/auth.middleware.js";
+import { authUser, optionalAuth } from "./middlewares/auth.middleware.js";
+import { systemRoute } from "./routes/system.routes.js";
+import { maintenanceMiddleware } from "./middlewares/maintenance.middleware.js";
 
 
 const app = express();
@@ -41,6 +44,30 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan("dev"));
+
+// Health check endpoint (always public and fail-open)
+app.get("/health", async (req, res) => {
+  try {
+    const { getMaintenanceStatus } = await import("./services/maintenance.service.js");
+    const maintenanceData = await getMaintenanceStatus(app.locals.redis);
+    return res.status(200).json({
+      status: "ok",
+      maintenance: !!maintenanceData?.enabled
+    });
+  } catch (error) {
+    return res.status(200).json({
+      status: "ok",
+      maintenance: false
+    });
+  }
+});
+
+// System Public routes
+app.use("/api/system", systemRoute);
+
+// Apply optionalAuth to populate req.user, then check maintenance mode
+app.use(optionalAuth);
+app.use(maintenanceMiddleware);
 
 // Mount Routers
 app.use("/api/auth", authRoute);
@@ -63,6 +90,9 @@ app.use("/api/seller/payout", payoutRoute);
 app.use("/api/seller/withdrawals", withdrawalRoute);
 app.get("/api/seller/transactions", authUser, getSellerTransactionsController);
 app.use("/api/admin/withdrawals", adminWithdrawalRoute);
+
+//sentry error handler
+Sentry.setupExpressErrorHandler(app);
 
 
 // Catch-all route for unmatched paths (404)

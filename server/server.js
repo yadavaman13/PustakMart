@@ -8,6 +8,9 @@ import redis from "./src/config/cache.js";
 // Database Connection
 connectDB();
 
+// Attach Redis to app locals
+app.locals.redis = redis;
+
 // Create HTTP Server
 const server = http.createServer(app);
 
