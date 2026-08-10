@@ -5,7 +5,8 @@ import { useHome } from "../hooks/useHome.js";
 import useAuth from "../../auth/hooks/useAuth.js";
 import SEO from "../../shared/components/SEO.jsx";
 import logoImg from "../../../assets/logo.jpg";
-import { getPublicStatsApi, getHomeBookRequestsApi } from "../services/home.api.js";
+import { getPublicStatsApi, getHomeBookRequestsApi, getHomeDepartmentsApi } from "../services/home.api.js";
+import { RiP2pFill } from "react-icons/ri";
 
 // Helper Counter Component for Social Proof Section
 function Counter({ value, trigger }) {
@@ -58,6 +59,7 @@ export default function HomePage() {
     collegesCount: 50
   });
   const [bookRequests, setBookRequests] = useState([]);
+  const [dbDepartments, setDbDepartments] = useState([]);
 
   const fallbackRequests = [
     {
@@ -133,8 +135,20 @@ export default function HomePage() {
       }
     }
 
+    async function loadDepartments() {
+      try {
+        const res = await getHomeDepartmentsApi();
+        if (res.success && res.departments) {
+          setDbDepartments(res.departments);
+        }
+      } catch (err) {
+        console.error("Error loading departments:", err);
+      }
+    }
+
     loadStats();
     loadBookRequests();
+    loadDepartments();
   }, []);
 
   // Track scrolling to shrink navbar
@@ -235,14 +249,49 @@ export default function HomePage() {
 
   const activeListings = listings.length > 0 ? listings : fallbackListings;
 
-  // Semester Discovery Card definitions
-  const semesterStreams = [
-    { name: "Computer Engineering", years: "Semester 1-8", books: 142, bundles: 14, icon: "ri-cpu-line", color: "#F4B400" },
-    { name: "Information Technology", years: "Semester 1-8", books: 98, bundles: 9, icon: "ri-global-line", color: "#0077B5" },
-    { name: "Mechanical Engineering", years: "Semester 1-8", books: 86, bundles: 7, icon: "ri-settings-4-line", color: "#E1306C" },
-    { name: "Civil Engineering", years: "Semester 1-8", books: 64, bundles: 5, icon: "ri-compass-3-line", color: "#4CAF50" },
-    { name: "Electrical Engineering", years: "Semester 1-8", books: 73, bundles: 6, icon: "ri-flashlight-line", color: "#FF9800" }
-  ];
+  // Semester Discovery Card definitions dynamically loaded or fallback to defaults
+  const DEPARTMENT_METADATA = {
+    "computer": { icon: "ri-cpu-line", color: "#F4B400" },
+    "information": { icon: "ri-global-line", color: "#0077B5" },
+    "mechanical": { icon: "ri-settings-4-line", color: "#E1306C" },
+    "civil": { icon: "ri-compass-3-line", color: "#4CAF50" },
+    "electrical": { icon: "ri-flashlight-line", color: "#FF9800" },
+    "electronics": { icon: "ri-plug-line", color: "#9C27B0" },
+    "chemical": { icon: "ri-flask-line", color: "#009688" },
+    "biotechnology": { icon: "ri-dna-line", color: "#E91E63" },
+    "default": { icon: "ri-book-open-line", color: "#607D8B" }
+  };
+
+  const getDepartmentMeta = (name = "") => {
+    const normalized = name.toLowerCase();
+    for (const key of Object.keys(DEPARTMENT_METADATA)) {
+      if (key !== "default" && normalized.includes(key)) {
+        return DEPARTMENT_METADATA[key];
+      }
+    }
+    return DEPARTMENT_METADATA.default;
+  };
+
+  const semesterStreams = dbDepartments.length > 0
+    ? dbDepartments.map((dept) => {
+        const meta = getDepartmentMeta(dept.name);
+        return {
+          name: dept.name,
+          years: "Semester 1-8",
+          books: dept.books || 0,
+          bundles: dept.bundles || 0,
+          icon: meta.icon,
+          color: meta.color,
+          category: dept.category
+        };
+      })
+    : [
+        { name: "Computer Engineering", years: "Semester 1-8", books: 0, bundles: 0, icon: "ri-cpu-line", color: "#F4B400", category: "engineering" },
+        { name: "Information Technology", years: "Semester 1-8", books: 0, bundles: 0, icon: "ri-global-line", color: "#0077B5", category: "engineering" },
+        { name: "Mechanical Engineering", years: "Semester 1-8", books: 0, bundles: 0, icon: "ri-settings-4-line", color: "#E1306C", category: "engineering" },
+        { name: "Civil Engineering", years: "Semester 1-8", books: 0, bundles: 0, icon: "ri-compass-3-line", color: "#4CAF50", category: "engineering" },
+        { name: "Electrical Engineering", years: "Semester 1-8", books: 0, bundles: 0, icon: "ri-flashlight-line", color: "#FF9800", category: "engineering" }
+      ];
 
   const orgSchema = {
     "@context": "https://schema.org",
@@ -564,13 +613,16 @@ export default function HomePage() {
               <motion.div 
                 key={idx}
                 className="semester-card"
-                onClick={() => navigate(`/category/engineering?stream=${encodeURIComponent(stream.name)}`)}
+                onClick={() => {
+                  const cat = stream.category || "engineering";
+                  navigate(`/category/${cat}?stream=${encodeURIComponent(stream.name)}`);
+                }}
                 initial={{ opacity: 0, scale: 0.95 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.05 }}
               >
-                <i className={`${stream.icon} branch-icon`}></i>
+                <i className={`${stream.icon} branch-icon`} style={{ color: stream.color }}></i>
                 <h3>{stream.name}</h3>
                 <p className="sem-years">{stream.years}</p>
                 
@@ -883,13 +935,7 @@ export default function HomePage() {
           </div>
 
           <div className="banner-graphic">
-            {/* Abstract clean vectors using raw SVG representing student handover */}
-            <svg className="books-flow-graphic" viewBox="0 0 200 200" fill="none">
-              <rect x="30" y="70" width="60" height="90" rx="8" fill="#F4B400" fillOpacity="0.2" stroke="#F4B400" strokeWidth="2" />
-              <rect x="40" y="80" width="40" height="70" rx="4" fill="#F4B400" fillOpacity="0.3" />
-              <rect x="110" y="50" width="60" height="90" rx="8" fill="#171717" fillOpacity="0.1" stroke="#171717" strokeWidth="2" />
-              <path d="M90 100 H120 M110 90 L120 100 L110 110" stroke="#171717" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <RiP2pFill className="p2p-flow-graphic" />
           </div>
         </div>
       </section>

@@ -29,7 +29,7 @@ export async function maintenanceMiddleware(req, res, next) {
     // 3. Fetch status from Redis
     const maintenance = await getMaintenanceStatus();
 
-    if (maintenance && maintenance.enabled) {
+    if (false && maintenance && maintenance.enabled) {
       return res.status(503).json({
         success: false,
         message: maintenance.message || "PustakMart is currently undergoing maintenance. We'll be back shortly.",

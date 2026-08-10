@@ -350,3 +350,47 @@ export async function markListingAsSoldController(req, res) {
     res.status(500).json({ message: "Error marking listing as sold" });
   }
 }
+
+// Get active listing departments and counts
+export async function getListingDepartmentsController(req, res) {
+  try {
+    const stats = await listingModel.aggregate([
+      { $match: { status: "active", department: { $exists: true, $ne: null, $ne: "" } } },
+      {
+        $group: {
+          _id: "$department",
+          books: {
+            $sum: { $cond: [{ $eq: ["$listingType", "book"] }, 1, 0] }
+          },
+          bundles: {
+            $sum: { $cond: [{ $eq: ["$listingType", "bundle"] }, 1, 0] }
+          },
+          category: { $first: "$category" }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          name: "$_id",
+          books: 1,
+          bundles: 1,
+          category: 1
+        }
+      },
+      { $sort: { books: -1 } }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: "Listing departments retrieved successfully",
+      departments: stats
+    });
+  } catch (error) {
+    console.error("Get listing departments error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving listing departments",
+      error: error.message
+    });
+  }
+}

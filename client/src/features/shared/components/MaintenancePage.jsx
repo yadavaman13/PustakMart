@@ -92,7 +92,6 @@ export default function MaintenancePage({ message, startedAt, onRetry }) {
 
         <footer className="maintenance-footer">
           <p>© {new Date().getFullYear()} PustakMart. All rights reserved.</p>
-          <a href="/auth" className="admin-backdoor">Admin Portal</a>
         </footer>
       </div>
     </div>

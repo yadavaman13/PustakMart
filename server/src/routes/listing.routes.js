@@ -2,6 +2,7 @@ import expressRouter from "express";
 import {
   createBookListingController,
   getListingsController,
+  getListingDepartmentsController,
   getListingByIdController,
   updateListingController,
   deleteListingController,
@@ -25,6 +26,13 @@ listingRoute.post("/create", authUser, createListingValidator, createBookListing
  * @access public (personalizes if authenticated)
  */
 listingRoute.get("/", optionalAuth, getListingsController);
+
+/**
+ * @route GET /api/book/departments
+ * @description Fetch active departments and their book/bundle counts
+ * @access public
+ */
+listingRoute.get("/departments", getListingDepartmentsController);
 
 /**
  * @route GET /api/book/:id

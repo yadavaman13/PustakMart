@@ -37,3 +37,9 @@ export const getHomeBookRequestsApi = async (params = {}) => {
   const response = await api.get("/requests", { params });
   return response.data;
 };
+
+// Get listing departments stats
+export const getHomeDepartmentsApi = async () => {
+  const response = await api.get("/book/departments");
+  return response.data;
+};

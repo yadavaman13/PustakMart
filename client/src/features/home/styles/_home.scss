@@ -1531,10 +1531,19 @@
       display: none;
     }
 
-    .books-flow-graphic {
-      width: 100%;
-      max-width: 240px;
-      height: auto;
+    .p2p-flow-graphic {
+      font-size: 150px;
+      color: var(--color-brand);
+      opacity: 0.9;
+      filter: drop-shadow(0 10px 20px rgba(244, 180, 0, 0.15));
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      cursor: pointer;
+
+      &:hover {
+        transform: scale(1.12) rotate(-8deg);
+        filter: drop-shadow(0 16px 32px rgba(244, 180, 0, 0.35));
+        opacity: 1;
+      }
     }
   }
 }

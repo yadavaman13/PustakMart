@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useHome } from "../hooks/useHome.js";
 import useAuth from "../../auth/hooks/useAuth.js";
 import SEO from "../../shared/components/SEO.jsx";
@@ -53,8 +53,11 @@ const CATEGORY_MAP = {
 export default function CategoryLandingPage() {
   const { categoryId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { listings, loading, error, fetchListings } = useHome();
+
+  const streamParam = searchParams.get("stream") || searchParams.get("department") || "";
 
   const categoryInfo = CATEGORY_MAP[categoryId] || {
     label: "Academic Books",
@@ -65,8 +68,12 @@ export default function CategoryLandingPage() {
   };
 
   useEffect(() => {
-    fetchListings({ category: categoryId });
-  }, [categoryId, fetchListings]);
+    const params = { category: categoryId };
+    if (streamParam) {
+      params.department = streamParam;
+    }
+    fetchListings(params);
+  }, [categoryId, streamParam, fetchListings]);
 
   // Breadcrumb Structured Schema (JSON-LD)
   const breadcrumbSchema = {
