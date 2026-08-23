@@ -124,3 +124,47 @@ export async function getPublicStatsController(req, res) {
     });
   }
 }
+
+// Retrieve public college names for display/filters
+export async function getPublicCollegesController(req, res) {
+  try {
+    const [collegesFromUsers, collegesFromListings] = await Promise.all([
+      userModel.distinct("collegeName", { isDeleted: false }),
+      listingModel.distinct("collegeName", { status: "active" })
+    ]);
+
+    const defaultColleges = [
+      "IIT Delhi",
+      "BITS Pilani",
+      "DTU Delhi",
+      "NIT Trichy",
+      "VIT Vellore",
+      "NSUT Delhi",
+      "RVCE Bangalore",
+      "COEP Pune"
+    ];
+
+    const allColleges = Array.from(
+      new Set([
+        ...collegesFromUsers,
+        ...collegesFromListings,
+        ...defaultColleges
+      ])
+    )
+      .filter(Boolean)
+      .map(c => c.trim());
+
+    res.status(200).json({
+      success: true,
+      message: "Colleges retrieved successfully",
+      colleges: allColleges
+    });
+  } catch (error) {
+    console.error("Get public colleges error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving public colleges",
+      error: error.message
+    });
+  }
+}

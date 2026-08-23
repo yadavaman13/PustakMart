@@ -1,5 +1,5 @@
 import expressRouter from "express";
-import { getHomeFeedController, getPublicStatsController } from "../controllers/feeds.controller.js";
+import { getHomeFeedController, getPublicStatsController, getPublicCollegesController } from "../controllers/feeds.controller.js";
 import { optionalAuth } from "../middlewares/auth.middleware.js";
 
 export const feedRoute = expressRouter();
@@ -17,3 +17,10 @@ feedRoute.get("/home", optionalAuth, getHomeFeedController);
  * @access public
  */
 feedRoute.get("/stats", getPublicStatsController);
+
+/**
+ * @route GET /api/feeds/colleges
+ * @description Fetch active college names for display/filters
+ * @access public
+ */
+feedRoute.get("/colleges", getPublicCollegesController);
