@@ -15,7 +15,7 @@ export async function sendOtpEmail(email, otp, type) {
     : "PustakMart - Reset Your Password Request";
 
   // Use the HTML template utility
-  const html = getOtpHtml(otp);
+  const html = getOtpHtml(otp, type);
   const text = `Your OTP code is: ${otp}. Please use this to verify your email or reset your password.`;
 
   return await sendEmail(email, subject, text, html);
