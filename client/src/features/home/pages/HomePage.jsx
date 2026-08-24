@@ -5,7 +5,7 @@ import { useHome } from "../hooks/useHome.js";
 import useAuth from "../../auth/hooks/useAuth.js";
 import SEO from "../../shared/components/SEO.jsx";
 import logoImg from "../../../assets/logo.jpg";
-import { getPublicStatsApi, getHomeBookRequestsApi, getHomeDepartmentsApi } from "../services/home.api.js";
+import { getPublicStatsApi, getHomeBookRequestsApi, getHomeDepartmentsApi, getHomeCollegesApi } from "../services/home.api.js";
 import { RiP2pFill } from "react-icons/ri";
 
 // Helper Counter Component for Social Proof Section
@@ -60,6 +60,16 @@ export default function HomePage() {
   });
   const [bookRequests, setBookRequests] = useState([]);
   const [dbDepartments, setDbDepartments] = useState([]);
+  const [colleges, setColleges] = useState([
+    "IIT Delhi",
+    "BITS Pilani",
+    "DTU Delhi",
+    "NIT Trichy",
+    "VIT Vellore",
+    "NSUT Delhi",
+    "RVCE Bangalore",
+    "COEP Pune"
+  ]);
 
   const fallbackRequests = [
     {
@@ -146,9 +156,21 @@ export default function HomePage() {
       }
     }
 
+    async function loadColleges() {
+      try {
+        const res = await getHomeCollegesApi();
+        if (res.success && res.colleges) {
+          setColleges(res.colleges);
+        }
+      } catch (err) {
+        console.error("Error loading colleges:", err);
+      }
+    }
+
     loadStats();
     loadBookRequests();
     loadDepartments();
+    loadColleges();
   }, []);
 
   // Track scrolling to shrink navbar
@@ -517,24 +539,18 @@ export default function HomePage() {
           <div className="marquee-wrapper">
             <div className="marquee-track">
               <div className="marquee-content">
-                <div className="college-logo-item"><i className="ri-government-line"></i> IIT Delhi</div>
-                <div className="college-logo-item"><i className="ri-government-line"></i> BITS Pilani</div>
-                <div className="college-logo-item"><i className="ri-government-line"></i> DTU Delhi</div>
-                <div className="college-logo-item"><i className="ri-government-line"></i> NIT Trichy</div>
-                <div className="college-logo-item"><i className="ri-government-line"></i> VIT Vellore</div>
-                <div className="college-logo-item"><i className="ri-government-line"></i> NSUT Delhi</div>
-                <div className="college-logo-item"><i className="ri-government-line"></i> RVCE Bangalore</div>
-                <div className="college-logo-item"><i className="ri-government-line"></i> COEP Pune</div>
+                {colleges.map((college, idx) => (
+                  <div key={`marquee-1-${idx}`} className="college-logo-item">
+                    <i className="ri-government-line"></i> {college}
+                  </div>
+                ))}
               </div>
               <div className="marquee-content">
-                <div className="college-logo-item"><i className="ri-government-line"></i> IIT Delhi</div>
-                <div className="college-logo-item"><i className="ri-government-line"></i> BITS Pilani</div>
-                <div className="college-logo-item"><i className="ri-government-line"></i> DTU Delhi</div>
-                <div className="college-logo-item"><i className="ri-government-line"></i> NIT Trichy</div>
-                <div className="college-logo-item"><i className="ri-government-line"></i> VIT Vellore</div>
-                <div className="college-logo-item"><i className="ri-government-line"></i> NSUT Delhi</div>
-                <div className="college-logo-item"><i className="ri-government-line"></i> RVCE Bangalore</div>
-                <div className="college-logo-item"><i className="ri-government-line"></i> COEP Pune</div>
+                {colleges.map((college, idx) => (
+                  <div key={`marquee-2-${idx}`} className="college-logo-item">
+                    <i className="ri-government-line"></i> {college}
+                  </div>
+                ))}
               </div>
             </div>
           </div>

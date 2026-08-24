@@ -43,3 +43,9 @@ export const getHomeDepartmentsApi = async () => {
   const response = await api.get("/book/departments");
   return response.data;
 };
+
+// Get list of active colleges for the marquee
+export const getHomeCollegesApi = async () => {
+  const response = await api.get("/feeds/colleges");
+  return response.data;
+};
