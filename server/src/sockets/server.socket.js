@@ -1,6 +1,6 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
-import envConfig from "../config/envConfig.js";
+import envConfig from "../config/env.config.js";
 import { userModel } from "../models/user.model.js";
 import { conversationModel } from "../models/conversation.model.js";
 import { messageModel } from "../models/message.model.js";

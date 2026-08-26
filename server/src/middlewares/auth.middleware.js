@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { userModel } from "../models/user.model.js";
 import { blacklistTokenModel } from "../models/blacklist.model.js";
-import envConfig from "../config/envConfig.js";
+import envConfig from "../config/env.config.js";
 
 // Strict auth check (requires token)
 export async function authUser(req, res, next) {

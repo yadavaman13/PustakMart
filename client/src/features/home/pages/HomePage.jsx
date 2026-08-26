@@ -5,7 +5,7 @@ import { useHome } from "../hooks/useHome.js";
 import useAuth from "../../auth/hooks/useAuth.js";
 import SEO from "../../shared/components/SEO.jsx";
 import logoImg from "../../../assets/logo.jpg";
-import { getPublicStatsApi, getHomeBookRequestsApi, getHomeDepartmentsApi, getHomeCollegesApi } from "../services/home.api.js";
+import { getPublicStatsApi, getHomeBookRequestsApi, getHomeDepartmentsApi, getHomeCollegesApi, getPlatformReviewsApi } from "../services/home.api.js";
 import { RiP2pFill } from "react-icons/ri";
 
 // Helper Counter Component for Social Proof Section
@@ -42,6 +42,51 @@ export default function HomePage() {
   const { user, logout } = useAuth();
   const { listings, loading, error, fetchListings } = useHome();
 
+  const fallbackReviews = [
+    {
+      _id: "mock-platform-rev-1",
+      rating: 5,
+      review: "Found all my Sem 5 Computer Engineering reference books within 2 hours. Handed them over right in the canteen. Saved around ₹1200!",
+      user: {
+        name: "Siddharth Goel",
+        collegeName: "DTU Delhi",
+        department: "Comp Engg",
+        ProfilePicture: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100"
+      }
+    },
+    {
+      _id: "mock-platform-rev-2",
+      rating: 5,
+      review: "Selling my previous semester sets was seamless. Instead of selling to trash dealers, I gave them to a junior who actually needed them.",
+      user: {
+        name: "Preeti Sen",
+        collegeName: "IIT Delhi",
+        department: "Chemical Engg",
+        ProfilePicture: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100"
+      }
+    },
+    {
+      _id: "mock-platform-rev-3",
+      rating: 5,
+      review: "I was looking for Korth's DBMS for ages. Requested it, and a senior notified me the same day. Incredible campus community feel!",
+      user: {
+        name: "Aryan Verma",
+        collegeName: "NSUT Delhi",
+        department: "IT",
+        ProfilePicture: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100"
+      }
+    }
+  ];
+
+  const getMarqueeItems = (list) => {
+    if (!list || list.length === 0) return [];
+    let result = [...list];
+    while (result.length < 8) {
+      result = [...result, ...list];
+    }
+    return [...result, ...result];
+  };
+
   // Navigation states
   const [isScrolled, setIsScrolled] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -59,6 +104,7 @@ export default function HomePage() {
     collegesCount: 50
   });
   const [bookRequests, setBookRequests] = useState([]);
+  const [platformReviews, setPlatformReviews] = useState([]);
   const [dbDepartments, setDbDepartments] = useState([]);
   const [colleges, setColleges] = useState([
     "IIT Delhi",
@@ -167,10 +213,22 @@ export default function HomePage() {
       }
     }
 
+    async function loadPlatformReviews() {
+      try {
+        const res = await getPlatformReviewsApi();
+        if (res.success && res.data?.reviews) {
+          setPlatformReviews(res.data.reviews);
+        }
+      } catch (err) {
+        console.error("Error loading platform reviews:", err);
+      }
+    }
+
     loadStats();
     loadBookRequests();
     loadDepartments();
     loadColleges();
+    loadPlatformReviews();
   }, []);
 
   // Track scrolling to shrink navbar
@@ -966,69 +1024,33 @@ export default function HomePage() {
           </div>
 
           <div className="testimonials-carousel-wrapper">
-            <div className="testimonials-track">
-              {/* Review 1 */}
-              <div className="testimonial-card">
-                <div className="stars-row" style={{ color: "var(--color-brand)", marginBottom: "12px", display: "flex", gap: "4px" }}>
-                  <i className="ri-star-fill"></i>
-                  <i className="ri-star-fill"></i>
-                  <i className="ri-star-fill"></i>
-                  <i className="ri-star-fill"></i>
-                  <i className="ri-star-fill"></i>
-                </div>
-                <p className="quote">
-                  "Found all my Sem 5 Computer Engineering reference books within 2 hours. Handed them over right in the canteen. Saved around ₹1200!"
-                </p>
-                <div className="profile">
-                  <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100" alt="Student" />
-                  <div className="info">
-                    <h4>Siddharth Goel</h4>
-                    <p>DTU Delhi, Comp Engg</p>
+            <div className="testimonials-marquee-track">
+              {getMarqueeItems(platformReviews.length > 0 ? platformReviews : fallbackReviews).map((rev, idx) => (
+                <div className="testimonial-card" key={`${rev._id || idx}-${idx}`}>
+                  <div className="stars-row" style={{ color: "var(--color-brand)", marginBottom: "12px", display: "flex", gap: "4px" }}>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <i
+                        key={i}
+                        className={i < rev.rating ? "ri-star-fill" : "ri-star-line"}
+                      ></i>
+                    ))}
+                  </div>
+                  <p className="quote">{rev.review ? `"${rev.review}"` : "No review comment left."}</p>
+                  <div className="profile">
+                    <img
+                      src={rev.user?.ProfilePicture || "https://ik.imagekit.io/cuq3fe9wm/PustakMart/Avatar.png"}
+                      alt={rev.user?.name || "Student"}
+                    />
+                    <div className="info">
+                      <h4>{rev.user?.name || "Student"}</h4>
+                      <p>
+                        {rev.user?.collegeName || "Verified Campus"}
+                        {rev.user?.department ? `, ${rev.user.department}` : ""}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Review 2 */}
-              <div className="testimonial-card">
-                <div className="stars-row" style={{ color: "var(--color-brand)", marginBottom: "12px", display: "flex", gap: "4px" }}>
-                  <i className="ri-star-fill"></i>
-                  <i className="ri-star-fill"></i>
-                  <i className="ri-star-fill"></i>
-                  <i className="ri-star-fill"></i>
-                  <i className="ri-star-fill"></i>
-                </div>
-                <p className="quote">
-                  "Selling my previous semester sets was seamless. Instead of selling to trash dealers, I gave them to a junior who actually needed them."
-                </p>
-                <div className="profile">
-                  <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100" alt="Student" />
-                  <div className="info">
-                    <h4>Preeti Sen</h4>
-                    <p>IIT Delhi, Chemical Engg</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Review 3 */}
-              <div className="testimonial-card">
-                <div className="stars-row" style={{ color: "var(--color-brand)", marginBottom: "12px", display: "flex", gap: "4px" }}>
-                  <i className="ri-star-fill"></i>
-                  <i className="ri-star-fill"></i>
-                  <i className="ri-star-fill"></i>
-                  <i className="ri-star-fill"></i>
-                  <i className="ri-star-fill"></i>
-                </div>
-                <p className="quote">
-                  "I was looking for Korth's DBMS for ages. Requested it, and a senior notified me the same day. Incredible campus community feel!"
-                </p>
-                <div className="profile">
-                  <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100" alt="Student" />
-                  <div className="info">
-                    <h4>Aryan Verma</h4>
-                    <p>NSUT Delhi, IT</p>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -1090,6 +1112,7 @@ export default function HomePage() {
                 <a href="#faq">FAQ</a>
                 <a href="#terms">Terms of Service</a>
                 <a href="#privacy">Privacy Policy</a>
+                <Link to="/rate-us">Rate Us</Link>
               </div>
             </div>
           </div>

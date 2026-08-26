@@ -1,5 +1,5 @@
 import { generateImageKitAuthParams } from "../services/imagekit.service.js";
-import envConfig from "../config/envConfig.js";
+import envConfig from "../config/env.config.js";
 
 // Fetch ImageKit client-side auth signature parameters
 export async function getImageKitAuthParamsController(req, res) {

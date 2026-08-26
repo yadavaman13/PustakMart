@@ -1,6 +1,6 @@
 import http from "http";
 import app from "./src/app.js";
-import envConfig from "./src/config/envConfig.js";
+import envConfig from "./src/config/env.config.js";
 import { connectDB } from "./src/config/db.js";
 import { initSocket } from "./src/sockets/server.socket.js";
 import redis from "./src/config/cache.js";
