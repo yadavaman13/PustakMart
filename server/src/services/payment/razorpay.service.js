@@ -1,6 +1,6 @@
 import Razorpay from "razorpay";
 import crypto from "crypto";
-import envConfig from "../../config/envConfig.js";
+import envConfig from "../../config/env.config.js";
 import { validatePaymentVerification } from "razorpay/dist/utils/razorpay-utils.js";
 
 let razorpayClient = null;

@@ -8,7 +8,7 @@ import { conversationModel } from "../models/conversation.model.js";
 import { createRazorpayOrder, verifyRazorpaySignature } from "../services/payment/razorpay.service.js";
 import { validateCoupon } from "../services/coupon/validation.service.js";
 import { emitToUser } from "../sockets/server.socket.js";
-import envConfig from "../config/envConfig.js";
+import envConfig from "../config/env.config.js";
 
 // Reusable Constants
 const MARKETPLACE_FEE = 5;

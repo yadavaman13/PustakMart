@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import envConfig from "../../config/envConfig.js";
+import envConfig from "../../config/env.config.js";
 
 const { EMAIL_USER, CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN } = envConfig;
 

@@ -49,3 +49,15 @@ export const getHomeCollegesApi = async () => {
   const response = await api.get("/feeds/colleges");
   return response.data;
 };
+
+// Get all platform reviews
+export const getPlatformReviewsApi = async () => {
+  const response = await api.get("/platform-reviews");
+  return response.data;
+};
+
+// Submit/update a platform review
+export const submitPlatformReviewApi = async (data) => {
+  const response = await api.post("/platform-reviews", data);
+  return response.data;
+};

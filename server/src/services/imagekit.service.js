@@ -1,5 +1,5 @@
 import { ImageKit } from "@imagekit/nodejs";
-import envConfig from "../config/envConfig.js";
+import envConfig from "../config/env.config.js";
 
 let ImageKitClient = null;
 

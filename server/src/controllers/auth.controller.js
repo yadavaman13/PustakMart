@@ -3,7 +3,7 @@ import { blacklistTokenModel } from "../models/blacklist.model.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import envConfig from "../config/envConfig.js";
+import envConfig from "../config/env.config.js";
 import redis from "../config/cache.js";
 import { generateOtp } from "../utils/otp.util.js";
 import { sendOtpEmail } from "../services/email/otp.service.js";

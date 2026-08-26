@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import envConfig from '../config/envconfig.js';
+import envConfig from '../config/env.config.js';
 
 let gmail;
 

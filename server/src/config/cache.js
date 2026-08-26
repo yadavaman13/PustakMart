@@ -1,5 +1,5 @@
 import Redis from 'ioredis';
-import envConfig from './envConfig.js';
+import envConfig from './env.config.js';
 
 const redis = new Redis({
     host: envConfig.REDIS_HOST,

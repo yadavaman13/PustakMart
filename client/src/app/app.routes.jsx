@@ -15,6 +15,7 @@ const CategoryLandingPage = lazy(() => import("../features/home/pages/CategoryLa
 const CheckoutPage = lazy(() => import("../features/home/pages/CheckoutPage.jsx"));
 const MarketplacePage = lazy(() => import("../features/home/pages/MarketplacePage.jsx"));
 const ProductDetailPage = lazy(() => import("../features/home/pages/ProductDetailPage.jsx"));
+const RateUsPage = lazy(() => import("../features/home/pages/RateUsPage.jsx"));
 
 // Reusable Loading Fallback for Suspense
 const RouteLoader = () => (
@@ -139,6 +140,16 @@ export const AppRoutes = () => {
           element={
             <ProtectedRoute>
               <CheckoutPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Rate Us Page Route */}
+        <Route
+          path="/rate-us"
+          element={
+            <ProtectedRoute>
+              <RateUsPage />
             </ProtectedRoute>
           }
         />
