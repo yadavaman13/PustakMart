@@ -155,7 +155,7 @@ export default function ProductDetailPage() {
                       <p>{user.email}</p>
                     </div>
                     <div className="dropdown-divider"></div>
-                    <button className="dropdown-menu-item" onClick={() => { setShowUserDropdown(false); navigate("/dashboard"); }}>
+                    <button className="dropdown-menu-item" onClick={() => { setShowUserDropdown(false); navigate(user.role === "admin" ? "/admin" : "/dashboard"); }}>
                       <i className="ri-dashboard-3-line"></i>
                       <span>Dashboard</span>
                     </button>
