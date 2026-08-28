@@ -956,17 +956,15 @@ export default function AdminDashboardPage() {
                     <div style={{ marginTop: "10px" }}>
                       {maintenanceInfo?.enabled ? (
                         <button
-                          className="btn-danger"
+                          className="btn-maintenance btn-disable"
                           onClick={() => setIsConfirmingMaintenance(true)}
-                          style={{ maxWidth: "250px", backgroundColor: "#16a34a", borderColor: "#16a34a", color: "#fff" }}
                         >
                           Disable Maintenance Mode
                         </button>
                       ) : (
                         <button
-                          className="btn-danger"
+                          className="btn-maintenance btn-enable"
                           onClick={() => setIsConfirmingMaintenance(true)}
-                          style={{ maxWidth: "250px", backgroundColor: "#f59e0b", borderColor: "#f59e0b", color: "#171717" }}
                         >
                           Enable Maintenance Mode
                         </button>
