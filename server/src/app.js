@@ -97,6 +97,15 @@ app.use("/api/admin/withdrawals", adminWithdrawalRoute);
 Sentry.setupExpressErrorHandler(app);
 
 
+// Serve SPA index.html for any non-API GET requests (supporting client-side routing/refresh)
+app.get("/*splat", (req, res, next) => {
+  if (!req.originalUrl.startsWith("/api")) {
+    return res.sendFile(path.join(import.meta.dirname, "public", "index.html"));
+  }
+  next();
+});
+
+
 // Catch-all route for unmatched paths (404)
 app.use((req, res, next) => {
   res.status(404).json({

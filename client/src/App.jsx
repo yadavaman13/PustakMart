@@ -42,7 +42,7 @@ const App = () => {
   // Backdoor: Allow access to login/verify pages for administrators to authenticate
   const isAuthPath = window.location.pathname === "/auth" || window.location.pathname === "/verify-email";
 
-  if (false && maintenance && maintenance.enabled && !maintenance.isAdmin && !isAuthPath) {
+  if (maintenance && maintenance.enabled && !maintenance.isAdmin && !isAuthPath) {
     return (
       <MaintenancePage
         message={maintenance.message}
