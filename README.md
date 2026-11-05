@@ -2,197 +2,252 @@
 
 # PustakMart
 
-### _Verified Student-to-Student Campus Book Exchange Marketplace_
+### _A Verified Peer-to-Peer Academic Marketplace for University Campuses_
 
 [![React](https://img.shields.io/badge/React-19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
 [![Node.js](https://img.shields.io/badge/Node.js-Express_5-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose_9-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![Redis](https://img.shields.io/badge/Redis-Cloud-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
 [![Socket.io](https://img.shields.io/badge/Socket.io-Realtime-010101?style=for-the-badge&logo=socket.io&logoColor=white)](https://socket.io/)
+[![Sentry](https://img.shields.io/badge/Sentry-Telemetry-362D59?style=for-the-badge&logo=sentry&logoColor=white)](https://sentry.io/)
 
-A trust-centric, peer-to-peer (P2P) academic marketplace designed for college campuses. It enables students to securely buy, sell, and request reference books, course notes, and study bundles directly within their university campus.
+<p align="center">
+  <b>PustakMart bridges the gap between graduating seniors and incoming juniors.</b><br />
+  A localized, high-trust digital campus exchange enabling students to buy, sell, request, and negotiate textbooks, reference bundles, and course materials without shipping delays, courier charges, or retail markups.
+</p>
 
 ---
 
-[**Why PustakMart**](#-why-pustakmart) • [**Key Features**](#-key-features) • [**Technical Architecture**](#-technical-architecture) • [**Engineering Highlights**](#-engineering-highlights) • [**Project Structure**](#-project-structure) • [**Getting Started**](#-getting-started)
+[**Explore the Problem**](#-the-problem--our-vision) • [**Core Value Pillars**](#-core-value-pillars) • [**Product Feature Tour**](#-product-feature-tour) • [**User Journeys**](#-end-to-end-user-journeys) • [**System Architecture**](#-system-architecture) • [**Tech Stack**](#-technology-stack) • [**Engineering Highlights**](#-engineering-highlights) • [**Repository Structure**](#-repository-structure) • [**Getting Started**](#-getting-started) • [**Documentation**](#-documentation--testing)
+
+---
 
 </div>
 
----
+## The Problem & Our Vision
 
-## Why PustakMart?
+Academic textbooks, lab manuals, and exam reference books are notoriously expensive. Yet their utility for any single student is strictly temporary, lasting barely four to five months across a semester. Once finals are over, thousands of rupees worth of study resources sit idle on dorm shelves gathering dust.
 
-Academic textbooks and study packages are expensive, and their utility is typically limited to a single semester. Once a course finishes, these materials sit idle while incoming juniors face high costs to buy them new.
+Meanwhile, incoming juniors in the adjacent hostel or classroom enter the semester forced to purchase those exact same books brand-new at full retail price.
 
-**PustakMart** bridges this gap by creating a localized, secure, and user-friendly digital marketplace where students can easily discover, trade, and request materials from senior peers on their own campus.
+Generic secondhand classifieds (such as OLX or Facebook Marketplace) fail university students for several reasons:
 
-### High-Impact Value Proposition
+- **No Academic Context:** You cannot filter by university syllabus, specific branch (e.g., Computer Engineering), or semester.
+- **High Shipping & Packaging Friction:** Courier costs often exceed the book's value, and delivery takes days when a student needs the book for classes tomorrow.
+- **Trust & Safety Deficits:** Transactions take place with anonymous strangers off-campus without verified student accountability.
 
-- **Zero Logistics Cost:** Transactions are executed face-to-face on campus, eliminating packaging overhead and shipping costs.
-- **Verified Student Network:** Registration is restricted to students with verified emails and student IDs, building a high-trust network.
-- **Syllabus-Aligned Search:** Structured search parameters filter listings by college, branch/department, and semester.
-- **Demand-Driven System:** A request portal allows buyers to post syllabus needs, turning passive shopping into active seller matching.
-
----
-
-## Key Features
-
-### Buyer Experience
-
-- **Localized Search & Filters:** Browse listings filtered by College Name, Branch/Department, and Semester.
-- **Open Book Requests:** Submit demand-side requests detailing syllabus needs and target budgets.
-- **Favorites & Bookmarks:** Save listings to track availability.
-- **Negotiation & Live Chat:** Initiate instant messages directly from listing pages to coordinate trades.
-- **Integrated Payments:** Complete checkout via Razorpay with support for seller-issued coupons.
-- **Feedback Loops:** Submit ratings and reviews to build verified seller reputations.
-
-### Verified Seller Workspace
-
-- **Analytics Dashboard:** Monitor active listings, total completed sales, aggregate views, and customer ratings.
-- **Financial Insights:** Access dynamic month-over-month graphs charting gross sales, net earnings (after 10% commission processing), and transaction volumes.
-- **Single & Semester Bundle Uploads:** Publish individual books or semester course packs with condition ratings and cover files.
-- **Conversational Discounts:** Generate and send custom coupon codes directly inside active buyer chats, automatically posting system alerts.
-- **Active Demand Matching:** Browse campus-wide buyer requests and contact students to complete trades.
-
-### Admin Control Panel
-
-- **Platform Health HUD:** Monitor registered students, verified sellers, active listings, and completed trades.
-- **Identity Audit Queue:** Inspect student verification files (ID images/PDFs) and approve/reject applications with custom feedback.
-- **Moderation HUD:** Handle flagged listings, resolve transaction disputes, and manage user access controls.
+**PustakMart transforms campus academia into a circular economy.** By locking discovery to university communities and verifying student credentials, PustakMart empowers peers to discover, negotiate, and exchange books directly between classes, at the campus cafeteria, or in the library.
 
 ---
 
-## Tech Stack
-
-| Tier             | Technologies Used                                                                                                          |
-| :--------------- | :------------------------------------------------------------------------------------------------------------------------- |
-| **Frontend**     | React 19, Vite 7, React Router 6, Axios, Socket.io-client, Vanilla SCSS (CSS variables & micro-animations)                 |
-| **Backend**      | Node.js, Express 5, Socket.io, Mongoose, Express-Validator                                                                 |
-| **Databases**    | MongoDB Atlas (Primary Datastore), Redis Cloud (Session cache, rate limiting, and OTP states)                              |
-| **Integrations** | Razorpay Node SDK (Payments), ImageKit.io SDK (Media uploads), Nodemailer with Google OAuth2 (Secure transactional emails) |
-| **Testing**      | Artillery (Load testing & concurrency simulations), custom script suites                                                   |
-
----
-
-## Technical Architecture
-
-PustakMart is built on a decoupled MERN architecture backed by Redis caching and real-time Socket.io channels:
+## Core Value Pillars
 
 ```
-       +------------------------------------------------------------+
-       |                  Vite + React 19 Frontend                  |
-       +------------------------------------------------------------+
-                 | (Axios HTTP Requests)         | (Real-time Sockets)
-                 v                               v
-       +------------------------------------------------------------+
-       |                  Express 5 Backend Server                  |
-       +------------------------------------------------------------+
-         |               |              |              |          |
-         v               v              v              v          v
-   +-----------+   +-----------+  +-----------+  +-----------+ +-----------+
-   |  MongoDB  |   |   Redis   |  | ImageKit  |  | Razorpay  | | NodeMailer|
-   | Database  |   | Cache HUD |  | SDK Auth  |  | Payments  | |  OAuth2   |
-   +-----------+   +-----------+  +-----------+  +-----------+ +-----------+
+       Zero Logistics Cost                Verified Student Network               Syllabus-Aligned Filter
+  Hand off books on campus without     Sign up with college emails & verify     Browse by College, Department,
+     courier fees or packaging           student IDs for trusted exchanges         and Semester directly
+                 │                                      │                                    │
+                 └──────────────────────────────┬────────────────────────────────────────────┘
+                                                │
+                                                ▼
+                                    Two-Way Demand Marketplace
+                            List items for sale OR post open book requests
+                              to let senior sellers come directly to you
 ```
+
+- **Zero Delivery Cost & Zero Wait Time:** Trades happen face-to-face inside university premises. Students inspect the book's physical condition on the spot before finalizing.
+- **Campus Verified Network:** Students can submit their College ID card for administrative verification. Verified badges foster trust and deter bad actors.
+- **Syllabus-Aligned Precision:** Smart categorization allows students to drill down by **College ➔ Branch/Department ➔ Semester**, pinpointing required reading instantly.
+- **Demand-Driven Reverse Marketplace:** Can't find a niche elective reference guide? Post an **Open Book Request** stating your target budget, and senior peers on campus can reach out with offers.
+- **Conversational Commerce:** Live in-chat negotiations give sellers the power to issue dynamic, custom-tailored coupon discounts directly inside active chat threads.
+
+---
+
+## Product Feature Tour
+
+### 1. Buyer Experience
+
+- **Localized Campus Discovery:** The catalog automatically prioritizes listings from your own college, with instant filters for department, semester, condition grading (Like New, Good, Fair), and price range.
+- **Demand-Side Requests:** Post study material requests detailing subject name, semester, and target budget so senior students can match with you.
+- **Real-Time Negotiation Chat:** Start instant conversations with sellers directly from any book's detail page with typing indicators, delivery timestamps, and read receipts.
+- **Conversational Discounts:** Claim dynamic discount coupons issued directly by sellers inside the chat and apply them at checkout.
+- **Seamless Checkout:** Complete orders securely via Razorpay with support for cards, UPI, net banking, and platform coupon deductions.
+- **Saved Wishlist & Bookmarks:** Bookmark listings of interest to track price changes or availability before exam season.
+- **Verified Reviews & Ratings:** Leave post-purchase ratings and written feedback to highlight helpful sellers across campus.
+
+### 2. Verified Seller Workspace
+
+- **Flexible Listing Engine:** List individual textbooks or bundle entire semester study packs with custom photos, condition ratings, and syllabus descriptions.
+- **Direct-to-Cloud Uploads:** Upload high-resolution book cover photos and syllabus notes directly to CDN storage with zero server lag.
+- **Seller Analytics & Insights:** Dynamic dashboard tracking active inventory, sold counts, total views, customer ratings, gross revenue, and net earnings.
+- **Conversational Coupon Generator:** Negotiate with buyers in real time and issue single-use custom coupon codes right inside the chat window.
+- **Reverse Demand Matching:** Browse campus-wide student book requests and message buyers directly to fulfill their academic needs.
+- **Payout Profiles & Withdrawals:** Configure payout methods (UPI ID or Bank IFSC/Account) and submit withdrawal requests with a clear, transparent status tracker (`pending` ➔ `approved` ➔ `completed`).
+- **Unified Transaction Ledger:** Comprehensive accounting statement recording sales credits, 10% platform fees, and withdrawal debits.
+
+### 3. Admin Control Panel
+
+- **Platform Health HUD:** High-level metrics tracking total registered students, verified sellers, active listings, transaction volume, and platform revenue.
+- **Identity Verification Audit Queue:** Review uploaded student ID credentials (images/PDFs) with full-screen inspection tools and approve or reject applications with structured feedback notes.
+- **Community Moderation:** Review user-flagged listings or suspicious accounts, resolve disputes, and maintain campus marketplace safety.
+- **Withdrawal Processing Hub:** Audit seller payout requests against transaction snapshots, confirm bank/UPI transfers, and update payout states.
+- **Dynamic Maintenance Mode:** Toggle platform-wide maintenance mode on the fly with custom advisory notices without redeploying code.
+
+---
+
+## End-to-End User Journeys
+
+### The Buy & Handshake Journey
+
+```
+1. Discover Book        2. Live Chat            3. Dynamic Coupon       4. Checkout & Escrow    5. Campus Handoff
+Filter by college,  ──► Chat with senior    ──► Seller offers a     ──► Pay securely via    ──► Meet in library
+branch & semester       seller to negotiate     custom discount         Razorpay; listing       or cafeteria;
+to find textbook        condition & meeting     code inside chat        is marked reserved      inspect and collect
+```
+
+### The Seller & Payout Journey
+
+```
+1. Snap & Publish       2. Direct Cloud CDN     3. Real-Time Chat       4. Sale Completed       5. Payout Withdrawal
+Upload cover photo  ──► Direct upload to    ──► Answer buyer buyer  ──► Listing marked      ──► Request payout to
+and set semester,       ImageKit CDN with       questions; issue        as sold; 90% balance    UPI or Bank; admin
+condition & price       zero server lag         in-chat coupon          credited to wallet      processes in audit HUD
+```
+
+### The Reverse Request Journey
+
+```
+1. Post Request         2. Campus Broadcast     3. Senior Match         4. Instant Chat         5. Trade Finalized
+Junior posts: "Need ──► Listing appears in  ──► Senior with book    ──► Senior clicks       ──► Book is exchanged
+DBMS 4th Sem Book"      campus request feed     spots the request       "Message Student"       on campus easily
+```
+
+---
+
+## System Architecture
+
+PustakMart is architected as a decoupled, full-stack monorepo featuring a modern React SPA frontend, an Express 5 REST and WebSocket server, and a dual database layer (MongoDB Atlas + Redis Cloud).
+
+```
++---------------------------------------------------------------------------------------+
+|                                    CLIENT APPLICATION                                 |
+|               React 19 • Vite 7 • React Router 7 • SCSS Tokens • Framer Motion        |
++---------------------------------------------------------------------------------------+
+            │                                                       │
+            │ HTTP (Axios / JSON / Cookies)                         │ WebSockets (Socket.io)
+            v                                                       v
++---------------------------------------------------------------------------------------+
+|                                   BACKEND APPLICATION                                 |
+|                       Node.js (ESM) • Express 5 • Sentry Telemetry                    |
+|---------------------------------------------------------------------------------------|
+|  • Security Pipeline     : Helmet Headers, CORS Whitelist, Rate Limiting              |
+|  • Session & Guard       : Optional Auth JWT Injector, Fail-Open Maintenance Engine   |
+|  • Domain Modules        : 13 Modular Domains (Auth, Listings, Chat, Payments, etc.)  |
+|  • Real-Time Dispatcher  : Scoped Room Socket Engine (Chat, Typing, Live Alerts)       |
++---------------------------------------------------------------------------------------+
+            │                               │                       │
+            ├───────────────────────────────┼───────────────────────┤
+            v                               v                       v
++-----------------------+       +-----------------------+   +---------------------------+
+|     MongoDB Atlas     |       |      Redis Cloud      |   |   Cloud Integrations      |
+|-----------------------|       |-----------------------|   |---------------------------|
+| • User & ID Profiles  |       | • Staged Registrations|   | • Razorpay (Payments)     |
+| • Catalog Listings    |       | • OTP Rate Limiters   |   | • ImageKit.io (Media CDN) |
+| • Orders & Ledgers    |       | • Revoked Token List  |   | • Nodemailer (OAuth2 SMTP)|
+| • Chat Threads        |       | • Dynamic Maintenance |   | • Resend (Fallback Mail)  |
+| • Reviews & Reports   |       | • Sub-ms State Caching|   | • Sentry (APM / Errors)   |
++-----------------------+       +-----------------------+   +---------------------------+
+```
+
+---
+
+## Technology Stack
+
+| Domain                      | Technology                                             | Details & Purpose                                                     |
+| :-------------------------- | :----------------------------------------------------- | :-------------------------------------------------------------------- |
+| **Frontend Framework**      | [React 19](https://react.dev/)                         | Component architecture, hooks, and responsive interface               |
+| **Build & Bundler**         | [Vite 7](https://vite.dev/)                            | Lightning-fast HMR and optimized production bundling                  |
+| **Routing**                 | [React Router 7](https://reactrouter.com/)             | Client-side routing, protected routes, and navigation layouts         |
+| **Styling & Design**        | SCSS & CSS Variables                                   | Responsive design system, CSS variables, modular component styles     |
+| **Animations & Icons**      | Framer Motion & Remix Icons                            | Smooth interactive micro-animations and cohesive UI iconography       |
+| **Backend Runtime**         | [Node.js](https://nodejs.org/) (ESM)                   | High-concurrency event-driven asynchronous JavaScript runtime         |
+| **API Framework**           | [Express 5](https://expressjs.com/)                    | RESTful API routing, modern middleware pipelines, and error handling  |
+| **Primary Database**        | [MongoDB Atlas](https://www.mongodb.com/) / Mongoose 9 | Relational document modeling, schema validation, and indexes          |
+| **In-Memory Store**         | [Redis Cloud](https://redis.io/) / `ioredis`           | Ephemeral OTP storage, rate limiting counters, and session blacklists |
+| **Real-Time Sockets**       | [Socket.io](https://socket.io/) (v4.x)                 | Low-latency WebSockets for campus messaging and alerts                |
+| **Payments Integration**    | [Razorpay](https://razorpay.com/) Node SDK             | Escrow-ready payments, order creation, HMAC-SHA256 verification       |
+| **Media & Storage**         | [ImageKit.io](https://imagekit.io/)                    | Direct client-to-CDN media uploads via server-authenticated tokens    |
+| **Transactional Email**     | Google OAuth2 & Resend                                 | Dual-redundancy mailers delivering verified 6-digit OTP codes         |
+| **Monitoring & Telemetry**  | [Sentry](https://sentry.io/) Node SDK                  | Real-time crash diagnostics, stack traces, and request context        |
+| **Testing & Documentation** | Jest, Supertest & Artillery                            | Test-Driven Documentation (TDDoc) and high-concurrency load testing   |
 
 ---
 
 ## Engineering Highlights
 
-### 1. Multi-Stage Registration & Recovery Flow (Redis Guard)
+### 1. Dual-Tier Redis Auth Staging
 
-To prevent spam accounts and email abuse, registration and password resets are secured via a multi-tiered Redis caching layer:
+Unverified registration attempts never write to MongoDB. Instead, candidate payloads are validated and staged in Redis with a 5-minute TTL while an attempt counter protects against brute-force attacks. Only upon entering a valid OTP is the record committed to MongoDB, keeping the primary database free of junk and dead accounts.
 
-- **Rate Limiter:** Redis monitors dispatch frequency (`otp-send-count:${email}`). Users are limited to 5 OTP requests per hour with a strict 2-minute cooldown between dispatches.
-- **Payload Serialization:** Unverified user data is temporarily cached in Redis (`register-data:${email}`) with a 5-minute TTL to keep MongoDB free of unverified accounts.
-- **Attempt Counter:** Redis limits verification attempts (`attempts:register:${email}`) to 3. Exceeding this limit destroys the registration session.
-- **Transaction Commit:** Upon valid OTP verification, the payload is committed to MongoDB, and a secure HTTP-Only JWT is issued.
+### 2. High-Throughput Bcrypt Tuning
 
-### 2. High-Performance Hashing (Bcrypt Tuning)
+Password hashing is tuned to **7 salt rounds**. This achieves an optimal balance between cryptographic resilience and throughput, cutting CPU hashing latency from ~80ms to ~10ms per request. This prevents event loop starvation during morning campus rush hours.
 
-Password hashing uses Bcrypt optimized to **7 salt rounds**. This drops CPU verification latency from ~80ms to ~10ms, improving server login throughput and responsiveness under heavy load.
+### 3. Zero-Bottleneck Direct-to-Cloud Uploads
 
-### 3. Zero-Bottleneck Upload Architecture (Direct-to-Cloud)
+File uploads bypass the Node.js server completely. When a student uploads a textbook photo or ID card, the client requests a transient cryptographic signature from `/api/media/auth` and uploads directly to ImageKit's CDN. The backend only ever handles lightweight JSON URLs, eliminating memory buffer bloat.
 
-To prevent server memory bloat and API latency from file handling:
+### 4. Dynamic Maintenance Mode (Fail-Open)
 
-1. The client requests secure upload parameters (token, signature, expire timestamp) from the server.
-2. The server generates these temporary parameters using the ImageKit.io SDK.
-3. The client uploads files directly to ImageKit.io, keeping the server free of file handling.
-4. The server stores only the returned public file URLs in MongoDB.
+Platform maintenance can be activated in seconds via an admin toggle stored in Redis. All incoming non-admin requests are gracefully intercepted with a descriptive 503 screen, while administrators retain full access to test fixes. If Redis ever experiences an outage, the middleware **fails open**, preventing inadvertent downtime for users.
 
-### 4. Resilient Redis Reconnection Strategy
+### 5. Test-Driven Documentation (TDDoc) Engine
 
-The Redis client (`ioredis`) is configured with an exponential backoff retry strategy capped at 3 seconds:
-
-- `maxRetriesPerRequest: null` allows the server to queue database commands during brief Redis connection drops instead of throwing errors.
+API documentation and Postman collections never go stale. Integration tests running under Jest and Supertest execute against live routes, capture exact request and response schemas, and write human-readable Markdown docs into `docs/api-docs/` while updating `postman_collection.json` automatically.
 
 ---
 
-## Project Structure
-
-The project uses a clean modular structure separating frontend features and backend architectural layers:
+## Folder Structure
 
 ```text
 PustakMart/
-├── client/                     # Vite + React Frontend Application
+├── client/                     # Frontend Single Page Application (React 19 + Vite)
+│   ├── public/                 # Static assets, logos, and favicon
 │   ├── src/
-│   │   ├── app/                # Global router and base style sheets
-│   │   ├── features/
-│   │   │   ├── admin/          # Admin HUD components, hooks, services, and SCSS
-│   │   │   ├── auth/           # Login, Register, OTP verification flow
-│   │   │   ├── dashboard/      # User & Seller workspace features
-│   │   │   ├── home/           # Landing portal, marketplace catalog, search
-│   │   │   └── shared/         # Reusable layouts, validation schemas, context
-│   │   └── main.jsx            # React mounting entry point
+│   │   ├── app/                # Root router configuration and global style sheets
+│   │   ├── assets/             # Brand logos, illustrations, and banners
+│   │   ├── features/           # Domain-driven frontend feature slices
+│   │   │   ├── admin/          # Admin HUD, student ID audit queue, user management
+│   │   │   ├── auth/           # Login, registration, OTP validation, password reset
+│   │   │   ├── dashboard/      # Buyer and seller workspaces, listings, and withdrawals
+│   │   │   ├── home/           # Landing page, catalog marketplace, product details, checkout
+│   │   │   └── shared/         # Reusable modals, navigation bars, footer, auth context
+│   │   └── main.jsx            # React root application entrypoint
+│   ├── package.json
+│   └── vite.config.js
+├── server/                     # Backend API & WebSocket Server (Node.js + Express 5)
+│   ├── scripts/                # Automated Postman collection generator
+│   ├── src/
+│   │   ├── config/             # DB setups (Mongo, Redis) and centralized env configuration
+│   │   ├── middlewares/        # Authentication, maintenance interceptor, security guards
+│   │   ├── models/             # 15 Mongoose schemas (Listings, Users, Payments, Chats, etc.)
+│   │   ├── modules/            # 13 Encapsulated Domain Modules (Routes, Controllers, Validators)
+│   │   ├── services/           # Reusable services (Razorpay, ImageKit, Email, Maintenance)
+│   │   ├── shared/             # Shared validation utilities and HTML email templates
+│   │   ├── sockets/            # Real-time WebSocket connection manager and room router
+│   │   └── tests/              # 14 Sequential E2E test suites with live documentation loggers
+│   ├── tests/                  # Artillery load testing configuration scripts
+│   ├── server.js               # HTTP server bootstrap and Socket.io binding
+│   ├── README.md               # Dedicated Server Architecture & Backend Engineering Guide
 │   └── package.json
-└── server/                     # Node.js + Express.js Backend Application
-    ├── src/
-    │   ├── config/             # DB setups, Redis connectivity, environment variables
-    │   ├── controllers/        # Request handlers (Auth, Listings, Payments, Sockets)
-    │   ├── middlewares/        # JWT validation, admin checks, request validation parsers
-    │   ├── models/             # Mongoose schemas (Listings, Payments, Users, Withdrawals)
-    │   ├── routes/             # Express routes
-    │   ├── validators/         # Input validation rules (express-validator)
-    │   └── services/           # Nodemailer OAuth2, Razorpay, and ImageKit setups
-    ├── tests/                  # Integration and Artillery load test suites
-    └── server.js               # Express app setup and server listener
+├── docs/                       # Living Documentation & API Specifications
+│   ├── api-docs/               # 14 Auto-generated Markdown API module specs
+│   ├── testing.md              # Master Guide: E2E Integration Testing & TDDoc Blueprint
+│   └── api-docs/postman_collection.json # Exported Postman collection (v2.1.0)
+└── package.json                # Root monorepo script runner
 ```
-
----
-
-## API Summary
-
-### Authentication & Recovery (`/api/auth`)
-
-- `POST /register/send-otp` - Validates registration data, checks rate limits, and sends a registration OTP.
-- `POST /register/verify-otp` - Verifies the registration OTP, creates the user document in MongoDB, and issues a JWT token.
-- `POST /login` - Validates credentials, checks account status, and sets a secure JWT cookie.
-- `POST /logout` - Clears cookies and blacklists the active JWT token.
-- `POST /forgot-password/send-otp` - Sends a recovery OTP if the email is registered.
-- `POST /forgot-password/verify-otp` - Verifies the recovery OTP and returns a password reset session token.
-- `POST /reset-password` - Resets the password using a valid reset session token.
-
-### Listings & Catalog (`/api/book` & `/api/listings`)
-
-- `POST /create` - Publishes a new single book or bundle listing.
-- `GET /` - Queries active listings with local campus prioritizations.
-- `GET /:id` - Fetches single book metadata and increments views.
-- `DELETE /:id` - Soft-deletes a listing (sets status to `removed`).
-- `PATCH /:id/sold` - Marks a book as sold and increments seller sales metrics.
-
-### Payments & Transactions (`/api/payment` & `/api/payments`)
-
-- `POST /create-order` - Generates a Razorpay order, applies coupons, and deactivates duplicate pending orders.
-- `POST /verify` - Cryptographically verifies Razorpay payment signatures via HMAC-SHA256, completes payments, marks coupons as used, and reserves listings.
-
-### Real-Time Chats (`/api/conversations`)
-
-- `POST /` - Starts a chat session for a listing.
-- `GET /` - Retrieves active chat channels with previews.
-- `POST /message` - Sends messages, registers notifications, and triggers Socket.io broadcasts.
-- `POST /:id/coupon` - Generates custom seller discount coupons inside chats.
 
 ---
 
@@ -200,82 +255,146 @@ PustakMart/
 
 ### Prerequisites
 
-- **Node.js** (v18.x or higher)
-- **MongoDB** connection string (Atlas or Local)
-- **Redis** server instance (Local or Cloud)
-- **ImageKit.io** account API credentials
-- **Razorpay** merchant keys
-- **Gmail** SMTP OAuth2 credentials
+Ensure you have the following installed on your machine:
 
-### Quick Start Setup
+- **Node.js** (v18.0.0 or higher)
+- **npm** (v9.0.0 or higher)
+- **MongoDB** (Local instance or free [MongoDB Atlas](https://www.mongodb.com/) cluster)
+- **Redis** (Local instance or free [Redis Cloud](https://redis.io/) database)
 
-1. Clone the repository:
+### Quick Start Installation
+
+1. **Clone the repository:**
 
     ```bash
     git clone https://github.com/yadavaman13/PustakMart.git
     cd PustakMart
     ```
 
-2. Install and configure backend dependencies:
+2. **Configure Backend (`server/`):**
 
     ```bash
     cd server
     npm install
-    # Create a .env file based on configurations section below
-    npm run dev
     ```
 
-3. Install and configure frontend dependencies:
+    Create a `.env` file in `server/` with the required parameters (see [Environment Configuration](#-environment-configuration) below or refer to [server/README.md](./server/README.md)).
+
+3. **Configure Frontend (`client/`):**
+
     ```bash
     cd ../client
     npm install
-    npm run dev
     ```
 
----
-
-## Development Scripts & Verification Tests
-
-### Server Integration Tests (`/server`)
-
-Verify API functionalities, payment pipelines, secure uploads, and caches:
-
-```bash
-# Verify Razorpay integration
-node tests/test_payment.js
-
-# Verify Gmail SMTP OAuth2 emails
-node tests/test_email.js
-
-# Verify Redis caching configurations
-node tests/test_redis.js
-
-# Run full OTP registration and recovery lifecycle tests
-node tests/test_otp_flow.js
-```
-
-### High-Concurrency Concurrency Testing (Artillery)
-
-Assess platform performance under heavy traffic loads:
-
-```bash
-# Run Login Page API Load Test
-npx artillery run tests/login-load-test.yml
-
-# Run Authenticated Homepage landing page flow Load Test
-npx artillery run tests/homepage-load-test.yml
-```
-
-_Load test metrics and scaling analyses are located in [load_tests_analysis.md](./server/docs/load_tests_analysis.md)._
+4. **Launch Development Servers:**
+    - In terminal 1 (Server):
+        ```bash
+        cd server
+        npm run dev
+        # Backend runs on http://localhost:3000
+        ```
+    - In terminal 2 (Client):
+        ```bash
+        cd client
+        npm run dev
+        # Frontend runs on http://localhost:5173
+        ```
 
 ---
 
-## Contact & Portfolio
+## Environment Configuration
 
-- **Developer:** [Aman Yadav](https://www.yadavaman.tech)
-- **LinkedIn:** [Aman Yadav on LinkedIn](https://www.linkedin.com/in/gecdhd-comp-yadav-aman/)
-- **Code Repository:** [PustakMart GitHub](https://github.com/yadavaman13/PustakMart)
+Create a `.env` file inside the `server/` directory:
+
+```env
+# Server Runtime
+PORT=3000
+NODE_ENV=development
+CLIENT_ORIGINS=http://localhost:5173
+ALLOWED_CLIENT_ORIGIN=http://localhost:5173
+
+# Databases
+MONGO_URL=mongodb+srv://<user>:<password>@cluster0.mongodb.net/pustakmart?retryWrites=true&w=majority
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+# Security & Tokens
+JWT_SECRET_KEY=your_jwt_secret_signing_key
+
+# Email Service (Google OAuth2 + Gmail SMTP)
+CLIENT_ID=your_oauth2_client_id.apps.googleusercontent.com
+CLIENT_SECRET=your_oauth2_client_secret
+REFRESH_TOKEN=your_oauth2_refresh_token
+EMAIL_USER=your_campus_mailer@gmail.com
+RESEND_API_KEY=re_your_fallback_resend_api_key
+
+# Media Delivery (ImageKit.io)
+IMAGEKIT_PUBLIC_KEY=your_public_key
+IMAGEKIT_PRIVATE_KEY=your_private_key
+IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_id
+
+# Payment Processing (Razorpay)
+RAZORPAY_KEY_ID=rzp_test_your_key_id
+RAZORPAY_KEY_SECRET=your_secret_key
+
+# Telemetry
+SENTRY_DSN=https://your_sentry_dsn
+```
+
+---
+
+## Documentation & Testing
+
+PustakMart comes with comprehensive, verified documentation:
+
+| Document                                                          | Description                                                                                  |
+| :---------------------------------------------------------------- | :------------------------------------------------------------------------------------------- |
+| [**Server Architecture Guide**](./server/README.md)               | In-depth engineering breakdown of modules, controllers, cache flows, and WebSocket rooms     |
+| [**E2E Testing & TDDoc Blueprint**](./docs/testing.md)            | Complete guide on the test-driven documentation pipeline and live doc recording              |
+| [**Interactive API Docs**](./docs/api-docs/)                      | 14 structured Markdown documents covering every endpoint with real request/response payloads |
+| [**Postman Collection**](./docs/api-docs/postman_collection.json) | Ready-to-import v2.1.0 Postman collection with organized folders and pre-saved responses     |
+
+### Running Tests from Root:
+
+```bash
+# Run all E2E integration tests
+npm run test
+
+# Run tests and refresh Markdown documentation + Postman collection
+npm run test:api:docs
+
+# Re-generate Postman collection
+npm run generate:postman
+
+# Check code formatting with Prettier
+npm run format:check
+```
+
+---
+
+## Roadmap & Future Horizons
+
+- [ ] **Multi-Campus University Federation:** Allow adjacent regional colleges to opt into cross-campus book hubs.
+- [ ] **Barcode & ISBN Scanner:** Auto-populate book title, author, edition, and standard cover art by scanning the barcode on the back of any textbook.
+- [ ] **Campus Ambassador Verification Nodes:** Enable designated student hostel reps to act as physical verification checkpoints.
+- [ ] **AI-Powered Course Matcher:** Upload your semester syllabus PDF to automatically generate a shopping list of matching senior listings.
+
+---
+
+## Author & Acknowledgements
+
+Developed with passion by **Aman Yadav** to solve real everyday challenges on college campuses.
+
+- **Portfolio:** [yadavaman.tech](https://www.yadavaman.tech)
+- **LinkedIn:** [Aman Yadav](https://www.linkedin.com/in/gecdhd-comp-yadav-aman/)
+- **GitHub:** [@yadavaman13](https://github.com/yadavaman13)
+- **Project Repository:** [PustakMart on GitHub](https://github.com/yadavaman13/PustakMart)
+
+---
 
 <div align="center">
-  Made with ❤️ by <a href="https://www.yadavaman.tech">Aman</a>
+  <sub>PustakMart • Empowering Campus Academia Through Circular Exchange</sub><br />
+  <sub>Made with ❤️ by Aman Yadav</sub>
 </div>
