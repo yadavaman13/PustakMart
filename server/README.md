@@ -1,10 +1,10 @@
-# PustakMart Server Backend
+# PustakMart Server Architecture
 
-The PustakMart backend is a high-performance RESTful API and real-time WebSocket server built with Node.js, Express.js, MongoDB/Mongoose, Redis, and Socket.io. It handles campus-first discovery, transaction workflows, conversational negotiations, and secure payments.
+PustakMart backend is a high-performance RESTful API and real-time WebSocket server built with Node.js, Express.js, MongoDB/Mongoose, Redis, and Socket.io. It handles campus-first discovery, transaction workflows, conversational negotiations, and secure payments.
 
 ---
 
-## 🛠️ Core Tech Stack & Libraries
+## Core Tech Stack & Libraries
 
 * **Server Runtime:** Node.js (ES Modules syntax)
 * **API Framework:** Express.js (v5)
@@ -19,13 +19,13 @@ The PustakMart backend is a high-performance RESTful API and real-time WebSocket
 
 ---
 
-## 🗂️ Architectural Pattern
+## Architectural Pattern
 
 The server adheres to a clean controller-route-model design pattern. To make onboarding and evaluation easy, the backend logic is split into 10 logical feature domains detailed below.
 
 ---
 
-## 🧱 Feature-by-Feature Breakdown
+## Feature-by-Feature Breakdown
 
 ### 1. Authentication & Security Guard
 Manages register verification, login flows, session security, and account recovery. It uses Redis to serialize unverified payloads and block spam.
@@ -158,7 +158,7 @@ Provides administration utilities to audit profiles, resolve flags, and review p
 
 ---
 
-## 🔌 API Summary Table
+## API Summary Table
 
 | Method | Endpoint | Access | Middleware | Controller | Description |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -177,11 +177,3 @@ Provides administration utilities to audit profiles, resolve flags, and review p
 | **GET** | `/api/admin/withdrawals` | Admin | `authUser`, `isAdmin`| `getAdminWithdrawals` | Lists withdrawal requests for administrative audit |
 
 ---
-
-## 🏃‍♂️ Verification & Testing Runners
-
-The server includes test runners inside the `/tests` directory to verify backend configurations:
-* **Razorpay orders integration:** `node tests/test_payment.js`
-* **OAuth2 Nodemailer emails:** `node tests/test_email.js`
-* **Redis set/get caching operations:** `node tests/test_redis.js`
-* **OTP verification state machine:** `node tests/test_otp_flow.js`

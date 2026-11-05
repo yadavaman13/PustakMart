@@ -21,13 +21,13 @@ A trust-centric, peer-to-peer (P2P) academic marketplace designed for college ca
 
 ---
 
-## 💼 Why PustakMart?
+## Why PustakMart?
 
 Academic textbooks and study packages are expensive, and their utility is typically limited to a single semester. Once a course finishes, these materials sit idle while incoming juniors face high costs to buy them new. 
 
 **PustakMart** bridges this gap by creating a localized, secure, and user-friendly digital marketplace where students can easily discover, trade, and request materials from senior peers on their own campus.
 
-### 🌟 High-Impact Value Proposition
+### High-Impact Value Proposition
 * **Zero Logistics Cost:** Transactions are executed face-to-face on campus, eliminating packaging overhead and shipping costs.
 * **Verified Student Network:** Registration is restricted to students with verified emails and student IDs, building a high-trust network.
 * **Syllabus-Aligned Search:** Structured search parameters filter listings by college, branch/department, and semester.
@@ -35,9 +35,9 @@ Academic textbooks and study packages are expensive, and their utility is typica
 
 ---
 
-## 🎯 Key Features
+## Key Features
 
-### 👤 Buyer Experience
+### Buyer Experience
 * **Localized Search & Filters:** Browse listings filtered by College Name, Branch/Department, and Semester.
 * **Open Book Requests:** Submit demand-side requests detailing syllabus needs and target budgets.
 * **Favorites & Bookmarks:** Save listings to track availability.
@@ -45,21 +45,21 @@ Academic textbooks and study packages are expensive, and their utility is typica
 * **Integrated Payments:** Complete checkout via Razorpay with support for seller-issued coupons.
 * **Feedback Loops:** Submit ratings and reviews to build verified seller reputations.
 
-### 💼 Verified Seller Workspace
+### Verified Seller Workspace
 * **Analytics Dashboard:** Monitor active listings, total completed sales, aggregate views, and customer ratings.
 * **Financial Insights:** Access dynamic month-over-month graphs charting gross sales, net earnings (after 10% commission processing), and transaction volumes.
 * **Single & Semester Bundle Uploads:** Publish individual books or semester course packs with condition ratings and cover files.
 * **Conversational Discounts:** Generate and send custom coupon codes directly inside active buyer chats, automatically posting system alerts.
 * **Active Demand Matching:** Browse campus-wide buyer requests and contact students to complete trades.
 
-### 👑 Admin Control Panel
+### Admin Control Panel
 * **Platform Health HUD:** Monitor registered students, verified sellers, active listings, and completed trades.
 * **Identity Audit Queue:** Inspect student verification files (ID images/PDFs) and approve/reject applications with custom feedback.
 * **Moderation HUD:** Handle flagged listings, resolve transaction disputes, and manage user access controls.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Tier | Technologies Used |
 | :--- | :--- |
@@ -71,7 +71,7 @@ Academic textbooks and study packages are expensive, and their utility is typica
 
 ---
 
-## 🧱 Technical Architecture
+## Technical Architecture
 
 PustakMart is built on a decoupled MERN architecture backed by Redis caching and real-time Socket.io channels:
 
@@ -94,7 +94,7 @@ PustakMart is built on a decoupled MERN architecture backed by Redis caching and
 
 ---
 
-## ⚙️ Engineering Highlights
+## Engineering Highlights
 
 ### 1. Multi-Stage Registration & Recovery Flow (Redis Guard)
 To prevent spam accounts and email abuse, registration and password resets are secured via a multi-tiered Redis caching layer:
@@ -119,7 +119,7 @@ The Redis client (`ioredis`) is configured with an exponential backoff retry str
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 The project uses a clean modular structure separating frontend features and backend architectural layers:
 
@@ -151,9 +151,9 @@ PustakMart/
 
 ---
 
-## 🔌 API Summary
+## API Summary
 
-### 🔑 Authentication & Recovery (`/api/auth`)
+### Authentication & Recovery (`/api/auth`)
 * `POST /register/send-otp` - Validates registration data, checks rate limits, and sends a registration OTP.
 * `POST /register/verify-otp` - Verifies the registration OTP, creates the user document in MongoDB, and issues a JWT token.
 * `POST /login` - Validates credentials, checks account status, and sets a secure JWT cookie.
@@ -162,18 +162,18 @@ PustakMart/
 * `POST /forgot-password/verify-otp` - Verifies the recovery OTP and returns a password reset session token.
 * `POST /reset-password` - Resets the password using a valid reset session token.
 
-### 📚 Listings & Catalog (`/api/book` & `/api/listings`)
+### Listings & Catalog (`/api/book` & `/api/listings`)
 * `POST /create` - Publishes a new single book or bundle listing.
 * `GET /` - Queries active listings with local campus prioritizations.
 * `GET /:id` - Fetches single book metadata and increments views.
 * `DELETE /:id` - Soft-deletes a listing (sets status to `removed`).
 * `PATCH /:id/sold` - Marks a book as sold and increments seller sales metrics.
 
-### 💳 Payments & Transactions (`/api/payment` & `/api/payments`)
+### Payments & Transactions (`/api/payment` & `/api/payments`)
 * `POST /create-order` - Generates a Razorpay order, applies coupons, and deactivates duplicate pending orders.
 * `POST /verify` - Cryptographically verifies Razorpay payment signatures via HMAC-SHA256, completes payments, marks coupons as used, and reserves listings.
 
-### 💬 Real-Time Chats (`/api/conversations`)
+### Real-Time Chats (`/api/conversations`)
 * `POST /` - Starts a chat session for a listing.
 * `GET /` - Retrieves active chat channels with previews.
 * `POST /message` - Sends messages, registers notifications, and triggers Socket.io broadcasts.
@@ -181,7 +181,7 @@ PustakMart/
 
 ---
 
-## 🏁 Getting Started
+## Getting Started
 
 ### Prerequisites
 * **Node.js** (v18.x or higher)
@@ -215,7 +215,7 @@ PustakMart/
 
 ---
 
-## 📜 Development Scripts & Verification Tests
+## Development Scripts & Verification Tests
 
 ### Server Integration Tests (`/server`)
 Verify API functionalities, payment pipelines, secure uploads, and caches:
@@ -246,7 +246,7 @@ npx artillery run tests/homepage-load-test.yml
 
 ---
 
-## 🤝 Contact & Portfolio
+## Contact & Portfolio
 
 * **Developer:** [Aman Yadav](https://www.yadavaman.tech)
 * **LinkedIn:** [Aman Yadav on LinkedIn](https://www.linkedin.com/in/gecdhd-comp-yadav-aman/)
