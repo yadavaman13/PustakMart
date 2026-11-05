@@ -1,4 +1,4 @@
-import { notificationModel } from "../modules/notifications/notification.model.js";
+import { notificationModel } from "../models/notification.model.js";
 
 /**
  * Creates a notification in the database

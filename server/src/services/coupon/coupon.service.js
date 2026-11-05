@@ -1,4 +1,4 @@
-import { couponModel } from "../../modules/chat/coupon.model.js";
+import { couponModel } from "../../models/coupon.model.js";
 
 export const getCouponByCode = async (code) => {
   return await couponModel.findOne({ code: code.toUpperCase() });

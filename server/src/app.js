@@ -7,30 +7,22 @@ import path from 'path';
 import * as Sentry from "@sentry/node";
 
 // ─── Module Route Imports ───
-import { authRoute } from "./modules/auth/auth.routes.js";
-import { listingRoute } from "./modules/listings/listings.routes.js";
-import { savedListingRoute } from "./modules/listings/savedlistings.routes.js";
-import { bookRequestRoute } from "./modules/book-requests/bookRequests.routes.js";
-import { chatRoute } from "./modules/chat/chat.routes.js";
-import { messageRoute } from "./modules/chat/messages.routes.js";
-import { reviewRoute } from "./modules/reviews/reviews.routes.js";
-import { platformReviewRoute } from "./modules/reviews/platformReview.routes.js";
-import { reportRoute } from "./modules/reports/reports.routes.js";
-import { notificationRoute } from "./modules/notifications/notifications.routes.js";
+import { authRoute } from "./modules/auth/index.js";
+import { listingRoute, savedListingRoute } from "./modules/listings/index.js";
+import { bookRequestRoute } from "./modules/book-requests/index.js";
+import { chatRoute, messageRoute } from "./modules/chat/index.js";
+import { reviewRoute, platformReviewRoute } from "./modules/reviews/index.js";
+import { reportRoute } from "./modules/reports/index.js";
+import { notificationRoute } from "./modules/notifications/index.js";
+import { feedRoute } from "./modules/feeds/index.js";
+import { adminRoute, adminWithdrawalRoute } from "./modules/admin/index.js";
+import { mediaRoute } from "./modules/media/index.js";
+import { paymentRoute, listingsCheckoutRoute } from "./modules/payments/index.js";
+import { sellerRoute, payoutRoute, withdrawalRoute, getSellerTransactionsController } from "./modules/seller/index.js";
+import { systemRoute } from "./modules/system/index.js";
 
-import { feedRoute } from "./modules/feeds/feeds.routes.js";
-import { adminRoute } from "./modules/admin/admin.routes.js";
-import { mediaRoute } from "./modules/media/media.routes.js";
-import { paymentRoute } from "./modules/payments/payments.routes.js";
-import { listingsCheckoutRoute } from "./modules/payments/listingsCheckout.routes.js";
-import { sellerRoute } from "./modules/seller/seller.routes.js";
-import { payoutRoute } from "./modules/seller/payout.routes.js";
-import { withdrawalRoute } from "./modules/seller/withdrawal.routes.js";
-import { adminWithdrawalRoute } from "./modules/admin/adminWithdrawal.routes.js";
-import { getSellerTransactionsController } from "./modules/seller/withdrawal.controller.js";
-// ─── Middleware & Controller Imports ───
+// ─── Middleware Imports ───
 import { authUser, optionalAuth } from "./middlewares/auth.middleware.js";
-import { systemRoute } from "./modules/system/system.routes.js";
 import { maintenanceMiddleware } from "./middlewares/maintenance.middleware.js";
 
 

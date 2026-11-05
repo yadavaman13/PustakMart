@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
-import { userModel } from "../modules/auth/user.model.js";
-import { blacklistTokenModel } from "../modules/auth/blacklist.model.js";
+import { userModel } from "../models/user.model.js";
+import { blacklistTokenModel } from "../models/blacklist.model.js";
 import envConfig from "../config/env.config.js";
 
 // Strict auth check (requires token)

@@ -1,5 +1,5 @@
-import { paymentModel } from "../modules/payments/payment.model.js";
-import { withdrawalModel } from "../modules/seller/withdrawal.model.js";
+import { paymentModel } from "../models/payment.model.js";
+import { withdrawalModel } from "../models/withdrawal.model.js";
 
 /**
  * Merges paid orders (Credits) and withdrawal requests (Debits) into a unified ledger
