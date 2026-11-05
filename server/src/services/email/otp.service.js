@@ -1,5 +1,5 @@
 import sendEmail from "./resend.mail.service.js";
-import { getOtpHtml } from "../../utils/otp.util.js";
+import { getOtpHtml } from "../../shared/utils/otp.util.js";
 
 /**
  * Sends an OTP email to a user.

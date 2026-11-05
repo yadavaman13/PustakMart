@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
-import { paymentModel } from "../models/payment.model.js";
-import { withdrawalModel } from "../models/withdrawal.model.js";
+import { paymentModel } from "../modules/payments/payment.model.js";
+import { withdrawalModel } from "../modules/seller/withdrawal.model.js";
 
 /**
  * Computes all financials for a given seller in real-time

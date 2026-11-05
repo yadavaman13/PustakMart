@@ -1,10 +1,10 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import envConfig from "../config/env.config.js";
-import { userModel } from "../models/user.model.js";
-import { conversationModel } from "../models/conversation.model.js";
-import { messageModel } from "../models/message.model.js";
-import { notificationModel } from "../models/notification.model.js";
+import { userModel } from "../modules/auth/user.model.js";
+import { conversationModel } from "../modules/chat/conversation.model.js";
+import { messageModel } from "../modules/chat/message.model.js";
+import { notificationModel } from "../modules/notifications/notification.model.js";
 
 // Active user connections map (userId -> Set of socket.ids)
 export const onlineUsers = new Map();
