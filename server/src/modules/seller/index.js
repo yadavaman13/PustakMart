@@ -4,3 +4,4 @@ import { withdrawalRoute } from "./routes/withdrawal.routes.js";
 import { getSellerTransactionsController } from "./controllers/withdrawal.controller.js";
 
 export { sellerRoute, payoutRoute, withdrawalRoute, getSellerTransactionsController };
+
