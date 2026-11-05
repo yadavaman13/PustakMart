@@ -1,9 +1,9 @@
-import expressRouter from "express";
+import expressRouter from 'express';
 import {
-  toggleSaveListingController,
-  getSavedListingsController
-} from "../controllers/savedlistings.controller.js";
-import { authUser } from "../../../middlewares/auth.middleware.js";
+    toggleSaveListingController,
+    getSavedListingsController,
+} from '../controllers/savedlistings.controller.js';
+import { authUser } from '../../../middlewares/auth.middleware.js';
 
 export const savedListingRoute = expressRouter();
 
@@ -12,11 +12,11 @@ export const savedListingRoute = expressRouter();
  * @description Save or unsave a listing (bookmark toggle)
  * @access private
  */
-savedListingRoute.post("/:listingId", authUser, toggleSaveListingController);
+savedListingRoute.post('/:listingId', authUser, toggleSaveListingController);
 
 /**
  * @route GET /api/saved-listings
  * @description Retrieve all saved book listings of the authenticated user
  * @access private
  */
-savedListingRoute.get("/", authUser, getSavedListingsController);
+savedListingRoute.get('/', authUser, getSavedListingsController);

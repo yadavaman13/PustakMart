@@ -1,4 +1,3 @@
-import { feedRoute } from "./routes/feeds.routes.js";
+import { feedRoute } from './routes/feeds.routes.js';
 
 export { feedRoute };
-

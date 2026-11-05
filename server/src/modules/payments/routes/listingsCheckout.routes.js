@@ -1,6 +1,6 @@
-import expressRouter from "express";
-import { getCheckoutDetailsController } from "../controllers/payments.controller.js";
-import { authUser } from "../../../middlewares/auth.middleware.js";
+import expressRouter from 'express';
+import { getCheckoutDetailsController } from '../controllers/payments.controller.js';
+import { authUser } from '../../../middlewares/auth.middleware.js';
 
 export const listingsCheckoutRoute = expressRouter();
 
@@ -9,4 +9,4 @@ export const listingsCheckoutRoute = expressRouter();
  * @description Fetch book listing details and seller stats for the checkout view
  * @access private (authenticated users)
  */
-listingsCheckoutRoute.get("/:id/checkout", authUser, getCheckoutDetailsController);
+listingsCheckoutRoute.get('/:id/checkout', authUser, getCheckoutDetailsController);

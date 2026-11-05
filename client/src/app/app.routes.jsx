@@ -1,181 +1,162 @@
-import React, { Suspense, lazy } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import useAuth from "../features/auth/hooks/useAuth.js";
+import React, { Suspense, lazy } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import useAuth from '../features/auth/hooks/useAuth.js';
 
 // Lazy-loaded pages for optimized FCP/LCP performance SEO
-const HomePage = lazy(() => import("../features/home/pages/HomePage.jsx"));
-const AuthPage = lazy(() => import("../features/auth/pages/AuthPage.jsx"));
-const VerifyEmailPage = lazy(() => import("../features/auth/pages/VerifyEmailPage.jsx"));
-const ResetPasswordPage = lazy(() => import("../features/auth/pages/ResetPasswordPage.jsx"));
-const AdminDashboardPage = lazy(() => import("../features/admin/pages/AdminDashboardPage.jsx"));
-const DashboardLayout = lazy(() => import("../features/dashboard/components/DashboardLayout.jsx"));
+const HomePage = lazy(() => import('../features/home/pages/HomePage.jsx'));
+const AuthPage = lazy(() => import('../features/auth/pages/AuthPage.jsx'));
+const VerifyEmailPage = lazy(() => import('../features/auth/pages/VerifyEmailPage.jsx'));
+const ResetPasswordPage = lazy(() => import('../features/auth/pages/ResetPasswordPage.jsx'));
+const AdminDashboardPage = lazy(() => import('../features/admin/pages/AdminDashboardPage.jsx'));
+const DashboardLayout = lazy(() => import('../features/dashboard/components/DashboardLayout.jsx'));
 
 // New SEO pages
-const CategoryLandingPage = lazy(() => import("../features/home/pages/CategoryLandingPage.jsx"));
-const CheckoutPage = lazy(() => import("../features/home/pages/CheckoutPage.jsx"));
-const MarketplacePage = lazy(() => import("../features/home/pages/MarketplacePage.jsx"));
-const ProductDetailPage = lazy(() => import("../features/home/pages/ProductDetailPage.jsx"));
-const RateUsPage = lazy(() => import("../features/home/pages/RateUsPage.jsx"));
+const CategoryLandingPage = lazy(() => import('../features/home/pages/CategoryLandingPage.jsx'));
+const CheckoutPage = lazy(() => import('../features/home/pages/CheckoutPage.jsx'));
+const MarketplacePage = lazy(() => import('../features/home/pages/MarketplacePage.jsx'));
+const ProductDetailPage = lazy(() => import('../features/home/pages/ProductDetailPage.jsx'));
+const RateUsPage = lazy(() => import('../features/home/pages/RateUsPage.jsx'));
 
 // Reusable Loading Fallback for Suspense
 const RouteLoader = () => (
-  <div className="auth-loader">
-    <div className="spinner"></div>
-    <p>Loading PustakMart...</p>
-  </div>
+    <div className="auth-loader">
+        <div className="spinner"></div>
+        <p>Loading PustakMart...</p>
+    </div>
 );
 
 // Route wrapper for authenticated users only
 export const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+    const { user, loading } = useAuth();
 
-  if (loading) {
-    return <RouteLoader />;
-  }
+    if (loading) {
+        return <RouteLoader />;
+    }
 
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
+    if (!user) {
+        return <Navigate to="/auth" replace />;
+    }
 
-  return children;
+    return children;
 };
 
 // Route wrapper for guests/unauthenticated users only
 export const GuestRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+    const { user, loading } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="auth-loader">
-        <div className="spinner"></div>
-        <p>Checking session...</p>
-      </div>
-    );
-  }
-
-  if (user) {
-    if (user.role === "admin") {
-      return <Navigate to="/admin" replace />;
+    if (loading) {
+        return (
+            <div className="auth-loader">
+                <div className="spinner"></div>
+                <p>Checking session...</p>
+            </div>
+        );
     }
-    return <Navigate to="/" replace />;
-  }
 
-  return children;
+    if (user) {
+        if (user.role === 'admin') {
+            return <Navigate to="/admin" replace />;
+        }
+        return <Navigate to="/" replace />;
+    }
+
+    return children;
 };
 
 // Route wrapper for admin users only
 export const AdminRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+    const { user, loading } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="auth-loader">
-        <div className="spinner"></div>
-        <p>Checking admin privileges...</p>
-      </div>
-    );
-  }
+    if (loading) {
+        return (
+            <div className="auth-loader">
+                <div className="spinner"></div>
+                <p>Checking admin privileges...</p>
+            </div>
+        );
+    }
 
-  if (!user || user.role !== "admin") {
-    return <Navigate to="/" replace />;
-  }
+    if (!user || user.role !== 'admin') {
+        return <Navigate to="/" replace />;
+    }
 
-  return children;
+    return children;
 };
 
 export const AppRoutes = () => {
-  return (
-    <Suspense fallback={<RouteLoader />}>
-      <Routes>
-        <Route
-          path="/auth"
-          element={
-            <GuestRoute>
-              <AuthPage />
-            </GuestRoute>
-          }
-        />
-        <Route
-          path="/verify-email"
-          element={
-            <GuestRoute>
-              <VerifyEmailPage />
-            </GuestRoute>
-          }
-        />
-        <Route
-          path="/reset-password"
-          element={
-            <ResetPasswordPage />
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute>
-              <AdminRoute>
-                <AdminDashboardPage />
-              </AdminRoute>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardLayout />
-            </ProtectedRoute>
-          }
-        />
-        
-        {/* Category Landing Pages Route */}
-        <Route
-          path="/category/:categoryId"
-          element={<CategoryLandingPage />}
-        />
+    return (
+        <Suspense fallback={<RouteLoader />}>
+            <Routes>
+                <Route
+                    path="/auth"
+                    element={
+                        <GuestRoute>
+                            <AuthPage />
+                        </GuestRoute>
+                    }
+                />
+                <Route
+                    path="/verify-email"
+                    element={
+                        <GuestRoute>
+                            <VerifyEmailPage />
+                        </GuestRoute>
+                    }
+                />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route
+                    path="/admin"
+                    element={
+                        <ProtectedRoute>
+                            <AdminRoute>
+                                <AdminDashboardPage />
+                            </AdminRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/dashboard"
+                    element={
+                        <ProtectedRoute>
+                            <DashboardLayout />
+                        </ProtectedRoute>
+                    }
+                />
 
-        {/* Secure Checkout Page Route */}
-        <Route
-          path="/checkout/:listingId"
-          element={
-            <ProtectedRoute>
-              <CheckoutPage />
-            </ProtectedRoute>
-          }
-        />
+                {/* Category Landing Pages Route */}
+                <Route path="/category/:categoryId" element={<CategoryLandingPage />} />
 
-        {/* Rate Us Page Route */}
-        <Route
-          path="/rate-us"
-          element={
-            <ProtectedRoute>
-              <RateUsPage />
-            </ProtectedRoute>
-          }
-        />
+                {/* Secure Checkout Page Route */}
+                <Route
+                    path="/checkout/:listingId"
+                    element={
+                        <ProtectedRoute>
+                            <CheckoutPage />
+                        </ProtectedRoute>
+                    }
+                />
 
-        {/* Marketplace Page Route */}
-        <Route
-          path="/marketplace"
-          element={<MarketplacePage />}
-        />
+                {/* Rate Us Page Route */}
+                <Route
+                    path="/rate-us"
+                    element={
+                        <ProtectedRoute>
+                            <RateUsPage />
+                        </ProtectedRoute>
+                    }
+                />
 
-        {/* Detailed Product/Listing Page */}
-        <Route
-          path="/product/:listingId"
-          element={<ProductDetailPage />}
-        />
+                {/* Marketplace Page Route */}
+                <Route path="/marketplace" element={<MarketplacePage />} />
 
-        <Route
-          path="/"
-          element={
-            <HomePage />
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
-  );
+                {/* Detailed Product/Listing Page */}
+                <Route path="/product/:listingId" element={<ProductDetailPage />} />
+
+                <Route path="/" element={<HomePage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+        </Suspense>
+    );
 };
 
 export default AppRoutes;

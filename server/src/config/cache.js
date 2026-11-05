@@ -6,8 +6,7 @@ const redis = new Redis({
     port: Number(envConfig.REDIS_PORT),
     password: envConfig.REDIS_PASSWORD,
 
-    connectTimeout: 10000,  //ms
-    
+    connectTimeout: 10000, //ms
 
     retryStrategy(times) {
         if (times > 10) {

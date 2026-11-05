@@ -1,6 +1,6 @@
-import expressRouter from "express";
-import { createReportController } from "../controllers/reports.controller.js";
-import { authUser } from "../../../middlewares/auth.middleware.js";
+import expressRouter from 'express';
+import { createReportController } from '../controllers/reports.controller.js';
+import { authUser } from '../../../middlewares/auth.middleware.js';
 
 export const reportRoute = expressRouter();
 
@@ -9,4 +9,4 @@ export const reportRoute = expressRouter();
  * @description Submit a report against a book listing
  * @access private
  */
-reportRoute.post("/", authUser, createReportController);
+reportRoute.post('/', authUser, createReportController);

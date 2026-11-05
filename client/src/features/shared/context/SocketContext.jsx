@@ -1,56 +1,52 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { io } from "socket.io-client";
-import { AuthContext } from "../../auth/context/AuthContext.jsx";
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { io } from 'socket.io-client';
+import { AuthContext } from '../../auth/context/AuthContext.jsx';
 
 const SocketContext = createContext(null);
 
 export const SocketProvider = ({ children }) => {
-  const { user } = useContext(AuthContext);
-  const [socket, setSocket] = useState(null);
+    const { user } = useContext(AuthContext);
+    const [socket, setSocket] = useState(null);
 
-  useEffect(() => {
-    if (!user) {
-      if (socket) {
-        socket.disconnect();
-        setSocket(null);
-      }
-      return;
-    }
+    useEffect(() => {
+        if (!user) {
+            if (socket) {
+                socket.disconnect();
+                setSocket(null);
+            }
+            return;
+        }
 
-    console.log("Initializing Socket.io connection");
+        console.log('Initializing Socket.io connection');
 
-    const newSocket = io({
-      withCredentials: true,
-    });
+        const newSocket = io({
+            withCredentials: true,
+        });
 
-    newSocket.on("connect", () => {
-      console.log("Socket.io connected successfully, ID:", newSocket.id);
-    });
+        newSocket.on('connect', () => {
+            console.log('Socket.io connected successfully, ID:', newSocket.id);
+        });
 
-    newSocket.on("connect_error", (error) => {
-      console.error("Socket.io connection error:", error);
-    });
+        newSocket.on('connect_error', (error) => {
+            console.error('Socket.io connection error:', error);
+        });
 
-    newSocket.on("disconnect", (reason) => {
-      console.log("Socket.io disconnected, reason:", reason);
-    });
+        newSocket.on('disconnect', (reason) => {
+            console.log('Socket.io disconnected, reason:', reason);
+        });
 
-    setSocket(newSocket);
+        setSocket(newSocket);
 
-    return () => {
-      newSocket.disconnect();
-    };
-  }, [user]);
+        return () => {
+            newSocket.disconnect();
+        };
+    }, [user]);
 
-  return (
-    <SocketContext.Provider value={socket}>
-      {children}
-    </SocketContext.Provider>
-  );
+    return <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>;
 };
 
 export const useSocket = () => {
-  return useContext(SocketContext);
+    return useContext(SocketContext);
 };
 
 export default SocketContext;

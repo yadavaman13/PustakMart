@@ -1,6 +1,6 @@
-import expressRouter from "express";
-import { getMessagesController } from "../controllers/chat.controller.js";
-import { authUser } from "../../../middlewares/auth.middleware.js";
+import expressRouter from 'express';
+import { getMessagesController } from '../controllers/chat.controller.js';
+import { authUser } from '../../../middlewares/auth.middleware.js';
 
 export const messageRoute = expressRouter();
 
@@ -9,4 +9,4 @@ export const messageRoute = expressRouter();
  * @description Fetch all messages for a conversation
  * @access private
  */
-messageRoute.get("/:conversationId", authUser, getMessagesController);
+messageRoute.get('/:conversationId', authUser, getMessagesController);

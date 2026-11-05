@@ -1,9 +1,9 @@
-import expressRouter from "express";
+import expressRouter from 'express';
 import {
-  createReviewController,
-  getSellerReviewsController
-} from "../controllers/reviews.controller.js";
-import { authUser } from "../../../middlewares/auth.middleware.js";
+    createReviewController,
+    getSellerReviewsController,
+} from '../controllers/reviews.controller.js';
+import { authUser } from '../../../middlewares/auth.middleware.js';
 
 export const reviewRoute = expressRouter();
 
@@ -12,11 +12,11 @@ export const reviewRoute = expressRouter();
  * @description Submit feedback for a completed transaction
  * @access private
  */
-reviewRoute.post("/", authUser, createReviewController);
+reviewRoute.post('/', authUser, createReviewController);
 
 /**
  * @route GET /api/reviews/:sellerId
  * @description Get all reviews for a seller
  * @access public
  */
-reviewRoute.get("/:sellerId", getSellerReviewsController);
+reviewRoute.get('/:sellerId', getSellerReviewsController);

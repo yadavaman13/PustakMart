@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+import dotenv from 'dotenv';
 dotenv.config();
 
 function normalizeOrigin(origin = '') {
@@ -16,8 +16,15 @@ if (!process.env.JWT_SECRET_KEY) {
     throw new Error('MISSING ENVIRONMENT VARIABLE: JWT_SECRET_KEY');
 }
 
-if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || !process.env.REFRESH_TOKEN || !process.env.EMAIL_USER) {
-    throw new Error('MISSING ENVIRONMENT VARIABLES FOR EMAIL/OAUTH2 (CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN, EMAIL_USER)');
+if (
+    !process.env.CLIENT_ID ||
+    !process.env.CLIENT_SECRET ||
+    !process.env.REFRESH_TOKEN ||
+    !process.env.EMAIL_USER
+) {
+    throw new Error(
+        'MISSING ENVIRONMENT VARIABLES FOR EMAIL/OAUTH2 (CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN, EMAIL_USER)',
+    );
 }
 
 if (!process.env.IMAGEKIT_PRIVATE_KEY) {
@@ -28,16 +35,13 @@ if (!process.env.RESEND_API_KEY) {
     throw new Error('MISSING ENVIRONMENT VARIABLE: RESEND_API_KEY');
 }
 
-if(!process.env.SENTRY_DSN){
-    throw new Error('MISSING ENVIRONMENT VARIABLE: SENTRY_DSN')
+if (!process.env.SENTRY_DSN) {
+    throw new Error('MISSING ENVIRONMENT VARIABLE: SENTRY_DSN');
 }
 
 // Client Origins config
 const clientOriginsEnv = process.env.CLIENT_ORIGINS || process.env.ALLOWED_CLIENT_ORIGIN || '*';
-const clientOrigins = clientOriginsEnv
-    .split(',')
-    .map(normalizeOrigin)
-    .filter(Boolean);
+const clientOrigins = clientOriginsEnv.split(',').map(normalizeOrigin).filter(Boolean);
 
 if (isProduction && !process.env.CLIENT_ORIGINS && !process.env.ALLOWED_CLIENT_ORIGIN) {
     throw new Error('MISSING ENVIRONMENT VARIABLE: CLIENT_ORIGINS / ALLOWED_CLIENT_ORIGIN');
@@ -97,7 +101,10 @@ const envConfig = {
     REDIS_PASSWORD: redisPassword,
 
     isAllowedClientOrigin(origin, callback) {
-        const allowed = !origin || clientOrigins.includes('*') || clientOrigins.includes(normalizeOrigin(origin));
+        const allowed =
+            !origin ||
+            clientOrigins.includes('*') ||
+            clientOrigins.includes(normalizeOrigin(origin));
         if (typeof callback === 'function') {
             callback(null, allowed);
         }

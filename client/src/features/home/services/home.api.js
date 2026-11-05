@@ -1,8 +1,8 @@
-import axios from "axios";
+import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api',
-  withCredentials: true,
+    baseURL: '/api',
+    withCredentials: true,
 });
 
 /**
@@ -10,54 +10,54 @@ const api = axios.create({
  * @param {object} params - { category, search, page, limit }
  */
 export const getHomeListingsApi = async (params = {}) => {
-  const response = await api.get("/book", { params });
-  return response.data;
+    const response = await api.get('/book', { params });
+    return response.data;
 };
 
 // Get detailed info for a single book/bundle listing
 export const getListingDetailsApi = async (id) => {
-  const response = await api.get(`/book/${id}`);
-  return response.data;
+    const response = await api.get(`/book/${id}`);
+    return response.data;
 };
 
 // Get reviews of a specific seller
 export const getSellerReviewsApi = async (sellerId) => {
-  const response = await api.get(`/reviews/${sellerId}`);
-  return response.data;
+    const response = await api.get(`/reviews/${sellerId}`);
+    return response.data;
 };
 
 // Get public marketplace statistics (listings count, student count, seller count, exchanges, colleges)
 export const getPublicStatsApi = async () => {
-  const response = await api.get("/feeds/stats");
-  return response.data;
+    const response = await api.get('/feeds/stats');
+    return response.data;
 };
 
 // Get public open book requests
 export const getHomeBookRequestsApi = async (params = {}) => {
-  const response = await api.get("/requests", { params });
-  return response.data;
+    const response = await api.get('/requests', { params });
+    return response.data;
 };
 
 // Get listing departments stats
 export const getHomeDepartmentsApi = async () => {
-  const response = await api.get("/book/departments");
-  return response.data;
+    const response = await api.get('/book/departments');
+    return response.data;
 };
 
 // Get list of active colleges for the marquee
 export const getHomeCollegesApi = async () => {
-  const response = await api.get("/feeds/colleges");
-  return response.data;
+    const response = await api.get('/feeds/colleges');
+    return response.data;
 };
 
 // Get all platform reviews
 export const getPlatformReviewsApi = async () => {
-  const response = await api.get("/platform-reviews");
-  return response.data;
+    const response = await api.get('/platform-reviews');
+    return response.data;
 };
 
 // Submit/update a platform review
 export const submitPlatformReviewApi = async (data) => {
-  const response = await api.post("/platform-reviews", data);
-  return response.data;
+    const response = await api.post('/platform-reviews', data);
+    return response.data;
 };

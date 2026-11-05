@@ -1,32 +1,32 @@
-import axios from "axios";
+import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api',
-  withCredentials: true,
+    baseURL: '/api',
+    withCredentials: true,
 });
 
 /**
  * Fetch marketplace analytics counts.
  */
 export const getAdminAnalyticsApi = async () => {
-  const response = await api.get("/admin/analytics");
-  return response.data;
+    const response = await api.get('/admin/analytics');
+    return response.data;
 };
 
 /**
  * Fetch list of all registered users.
  */
 export const getAdminUsersApi = async () => {
-  const response = await api.get("/admin/users");
-  return response.data;
+    const response = await api.get('/admin/users');
+    return response.data;
 };
 
 /**
  * Fetch list of pending seller verification applications.
  */
 export const getPendingSellersApi = async () => {
-  const response = await api.get("/auth/admin/pending-sellers");
-  return response.data;
+    const response = await api.get('/auth/admin/pending-sellers');
+    return response.data;
 };
 
 /**
@@ -35,8 +35,8 @@ export const getPendingSellersApi = async () => {
  * @param {string} status - 'verified' | 'rejected'
  */
 export const verifySellerApi = async (id, status, comment) => {
-  const response = await api.post(`/auth/admin/verify-seller/${id}`, { status, comment });
-  return response.data;
+    const response = await api.post(`/auth/admin/verify-seller/${id}`, { status, comment });
+    return response.data;
 };
 
 /**
@@ -45,24 +45,24 @@ export const verifySellerApi = async (id, status, comment) => {
  * @param {object} data - { isBlocked, isDeleted }
  */
 export const updateUserStatusApi = async (id, data) => {
-  const response = await api.put(`/auth/admin/user-status/${id}`, data);
-  return response.data;
+    const response = await api.put(`/auth/admin/user-status/${id}`, data);
+    return response.data;
 };
 
 /**
  * Fetch all book listings.
  */
 export const getAdminListingsApi = async () => {
-  const response = await api.get("/admin/listings");
-  return response.data;
+    const response = await api.get('/admin/listings');
+    return response.data;
 };
 
 /**
  * Fetch reported flags.
  */
 export const getAdminReportsApi = async () => {
-  const response = await api.get("/admin/reports");
-  return response.data;
+    const response = await api.get('/admin/reports');
+    return response.data;
 };
 
 /**
@@ -71,49 +71,49 @@ export const getAdminReportsApi = async () => {
  * @param {string} status - 'resolved' | 'dismissed'
  */
 export const resolveReportApi = async (id, status) => {
-  const response = await api.patch(`/admin/reports/${id}`, { status });
-  return response.data;
+    const response = await api.patch(`/admin/reports/${id}`, { status });
+    return response.data;
 };
 
 /**
  * Admin Withdrawals & Payouts API
  */
 export const getAdminWithdrawalsApi = async (params = {}) => {
-  const response = await api.get("/admin/withdrawals", { params });
-  return response.data;
+    const response = await api.get('/admin/withdrawals', { params });
+    return response.data;
 };
 
 export const getAdminWithdrawalDetailsApi = async (id) => {
-  const response = await api.get(`/admin/withdrawals/${id}`);
-  return response.data;
+    const response = await api.get(`/admin/withdrawals/${id}`);
+    return response.data;
 };
 
 export const approveWithdrawalApi = async (id) => {
-  const response = await api.patch(`/admin/withdrawals/${id}/approve`);
-  return response.data;
+    const response = await api.patch(`/admin/withdrawals/${id}/approve`);
+    return response.data;
 };
 
 export const rejectWithdrawalApi = async (id, data) => {
-  const response = await api.patch(`/admin/withdrawals/${id}/reject`, data);
-  return response.data;
+    const response = await api.patch(`/admin/withdrawals/${id}/reject`, data);
+    return response.data;
 };
 
 export const processingWithdrawalApi = async (id) => {
-  const response = await api.patch(`/admin/withdrawals/${id}/processing`);
-  return response.data;
+    const response = await api.patch(`/admin/withdrawals/${id}/processing`);
+    return response.data;
 };
 
 export const completeWithdrawalApi = async (id, data) => {
-  const response = await api.patch(`/admin/withdrawals/${id}/complete`, data);
-  return response.data;
+    const response = await api.patch(`/admin/withdrawals/${id}/complete`, data);
+    return response.data;
 };
 
 /**
  * Fetch the current maintenance status and history log for the admin dashboard.
  */
 export const getMaintenanceStatusApi = async () => {
-  const response = await api.get("/admin/system/maintenance");
-  return response.data;
+    const response = await api.get('/admin/system/maintenance');
+    return response.data;
 };
 
 /**
@@ -121,7 +121,6 @@ export const getMaintenanceStatusApi = async () => {
  * @param {object} data - { enabled: boolean, message: string }
  */
 export const updateMaintenanceStatusApi = async (data) => {
-  const response = await api.patch("/admin/system/maintenance", data);
-  return response.data;
+    const response = await api.patch('/admin/system/maintenance', data);
+    return response.data;
 };
-

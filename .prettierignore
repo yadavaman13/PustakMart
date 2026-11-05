@@ -1,0 +1,21 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Package locks & builds
+package-lock.json
+**/package-lock.json
+dist
+**/dist
+build
+**/build
+
+# Environment and logs
+.env
+.env.*
+*.log
+
+# Git & IDE
+.git
+.vscode
+.idea

@@ -1,4 +1,3 @@
-import { bookRequestRoute } from "./routes/bookRequests.routes.js";
+import { bookRequestRoute } from './routes/bookRequests.routes.js';
 
 export { bookRequestRoute };
-
